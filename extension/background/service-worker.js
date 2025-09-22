@@ -332,16 +332,28 @@ class SecureTestingService {
   }
 
   async handleCommand(command) {
-    if (!this.isActive) return;
-
-    // Block certain keyboard shortcuts
-    const blockedCommands = ['Ctrl+Shift+I', 'F12', 'Ctrl+U', 'Ctrl+Shift+J'];
-    
-    if (blockedCommands.includes(command)) {
-      await this.logUnauthorizedAction('BLOCKED_SHORTCUT', {
-        command: command,
-        timestamp: Date.now()
-      });
+    switch (command) {
+      case 'emergency_stop':
+        await this.emergencyStop();
+        break;
+      
+      case '_execute_action':
+        // This is handled by the browser automatically (opens popup)
+        break;
+        
+      default:
+        // If monitoring is active, block certain keyboard shortcuts
+        if (this.isActive) {
+          const blockedCommands = ['Ctrl+Shift+I', 'F12', 'Ctrl+U', 'Ctrl+Shift+J'];
+          
+          if (blockedCommands.includes(command)) {
+            await this.logUnauthorizedAction('BLOCKED_SHORTCUT', {
+              command: command,
+              timestamp: Date.now()
+            });
+          }
+        }
+        break;
     }
   }
 
