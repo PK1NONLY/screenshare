@@ -313,6 +313,204 @@ class SystemMonitor {
     return { ...this.systemData };
   }
 
+  async getSystemInfo() {
+    await this.gatherSystemInfo();
+    
+    const info = {
+      timestamp: Date.now(),
+      cpu: this.systemData.cpu,
+      memory: this.systemData.memory,
+      battery: this.systemData.battery,
+      displays: this.systemData.displays,
+      processes: this.systemData.runningProcesses,
+      network: await this.getNetworkInfo(),
+      virtualMachine: await this.detectVirtualMachine()
+    };
+
+    // Check for low battery
+    if (info.battery.level < 0.5 && info.battery.charging === false) {
+      this.notifyLowBattery(info.battery.level);
+    }
+
+    // Check for virtual machine
+    if (info.virtualMachine.isVirtual) {
+      this.notifyVirtualMachine(info.virtualMachine);
+    }
+
+    return info;
+  }
+
+  async detectVirtualMachine() {
+    const vmIndicators = {
+      isVirtual: false,
+      confidence: 0,
+      indicators: [],
+      details: {}
+    };
+
+    try {
+      // Check user agent for VM indicators
+      const userAgent = navigator.userAgent.toLowerCase();
+      const vmUserAgentPatterns = [
+        'virtualbox', 'vmware', 'parallels', 'qemu', 'kvm', 
+        'xen', 'hyper-v', 'vbox', 'vm'
+      ];
+
+      for (const pattern of vmUserAgentPatterns) {
+        if (userAgent.includes(pattern)) {
+          vmIndicators.indicators.push(`User agent contains: ${pattern}`);
+          vmIndicators.confidence += 20;
+        }
+      }
+
+      // Check hardware concurrency (VMs often have limited cores)
+      const cores = navigator.hardwareConcurrency;
+      if (cores <= 2) {
+        vmIndicators.indicators.push(`Low CPU cores: ${cores}`);
+        vmIndicators.confidence += 10;
+      }
+
+      // Check memory (VMs often have limited memory)
+      if (this.systemData.memory.total < 4 * 1024 * 1024 * 1024) { // Less than 4GB
+        vmIndicators.indicators.push(`Low memory: ${(this.systemData.memory.total / (1024*1024*1024)).toFixed(1)}GB`);
+        vmIndicators.confidence += 15;
+      }
+
+      // Check screen resolution patterns common in VMs
+      const screen = window.screen;
+      const commonVMResolutions = [
+        '1024x768', '800x600', '1280x1024', '1366x768'
+      ];
+      const currentRes = `${screen.width}x${screen.height}`;
+      
+      if (commonVMResolutions.includes(currentRes)) {
+        vmIndicators.indicators.push(`Common VM resolution: ${currentRes}`);
+        vmIndicators.confidence += 10;
+      }
+
+      // Check for VM-specific GPU/graphics indicators
+      const canvas = document.createElement('canvas');
+      const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+      
+      if (gl) {
+        const renderer = gl.getParameter(gl.RENDERER).toLowerCase();
+        const vmGpuPatterns = [
+          'vmware', 'virtualbox', 'parallels', 'qemu', 'microsoft basic render'
+        ];
+
+        for (const pattern of vmGpuPatterns) {
+          if (renderer.includes(pattern)) {
+            vmIndicators.indicators.push(`VM GPU detected: ${renderer}`);
+            vmIndicators.confidence += 25;
+          }
+        }
+      }
+
+      // Check timezone (VMs often have UTC or specific timezone patterns)
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (timezone === 'UTC' || timezone.includes('Generic')) {
+        vmIndicators.indicators.push(`Suspicious timezone: ${timezone}`);
+        vmIndicators.confidence += 5;
+      }
+
+      // Check for VM-specific browser features
+      if (navigator.plugins.length === 0) {
+        vmIndicators.indicators.push('No browser plugins detected');
+        vmIndicators.confidence += 10;
+      }
+
+      // Check performance characteristics
+      const start = performance.now();
+      for (let i = 0; i < 100000; i++) {
+        Math.random();
+      }
+      const executionTime = performance.now() - start;
+      
+      if (executionTime > 50) { // Slow execution might indicate VM
+        vmIndicators.indicators.push(`Slow execution time: ${executionTime.toFixed(2)}ms`);
+        vmIndicators.confidence += 10;
+      }
+
+      // Determine if it's likely a VM
+      vmIndicators.isVirtual = vmIndicators.confidence >= 30;
+      vmIndicators.details = {
+        userAgent: navigator.userAgent,
+        cores: cores,
+        memory: this.systemData.memory.total,
+        resolution: currentRes,
+        timezone: timezone,
+        plugins: navigator.plugins.length,
+        executionTime: executionTime
+      };
+
+    } catch (error) {
+      console.error('Error detecting virtual machine:', error);
+      vmIndicators.error = error.message;
+    }
+
+    return vmIndicators;
+  }
+
+  async notifyLowBattery(level) {
+    const batteryLevel = level * 100;
+    
+    // Send message to content scripts
+    chrome.tabs.query({}, (tabs) => {
+      tabs.forEach(tab => {
+        chrome.tabs.sendMessage(tab.id, {
+          action: 'BATTERY_WARNING',
+          level: batteryLevel,
+          charging: this.systemData.battery.charging
+        }).catch(() => {
+          // Ignore errors for tabs that don't have our content script
+        });
+      });
+    });
+    
+    // Show browser notification
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl: 'icons/icon48.png',
+      title: 'Low Battery Warning',
+      message: `Battery level is ${batteryLevel.toFixed(0)}%. Please connect charger to continue the test.`
+    });
+  }
+
+  async notifyVirtualMachine(vmInfo) {
+    // Log the VM detection
+    if (self.secureTestingService) {
+      await self.secureTestingService.logUnauthorizedAction('VIRTUAL_MACHINE_DETECTED', {
+        confidence: vmInfo.confidence,
+        indicators: vmInfo.indicators,
+        details: vmInfo.details,
+        severity: 'HIGH',
+        timestamp: Date.now()
+      });
+    }
+
+    // Send message to content scripts
+    chrome.tabs.query({}, (tabs) => {
+      tabs.forEach(tab => {
+        chrome.tabs.sendMessage(tab.id, {
+          action: 'VIRTUAL_MACHINE_DETECTED',
+          confidence: vmInfo.confidence,
+          indicators: vmInfo.indicators
+        }).catch(() => {
+          // Ignore errors for tabs that don't have our content script
+        });
+      });
+    });
+    
+    // Show critical notification
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl: 'icons/icon48.png',
+      title: 'Virtual Machine Detected',
+      message: `Virtual machine detected with ${vmInfo.confidence}% confidence. This may violate test security policies.`,
+      priority: 2
+    });
+  }
+
   async generateSystemReport() {
     await this.gatherSystemInfo();
     

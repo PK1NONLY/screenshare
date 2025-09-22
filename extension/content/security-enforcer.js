@@ -270,14 +270,13 @@ class SecurityEnforcer {
   }
 
   blockDevTools() {
-    // Block F12 and other dev tools shortcuts
+    // Enhanced developer tools blocking with aggressive detection
     const listener = (e) => {
       // F12
       if (e.keyCode === 123) {
         e.preventDefault();
         e.stopPropagation();
-        this.logBlockedAction('DEV_TOOLS_BLOCKED', { key: 'F12' });
-        this.showBlockedNotification('Developer tools are not allowed during the test.');
+        this.handleDeveloperToolsViolation('F12');
         return false;
       }
       
@@ -285,8 +284,7 @@ class SecurityEnforcer {
       if (e.ctrlKey && e.shiftKey && e.keyCode === 73) {
         e.preventDefault();
         e.stopPropagation();
-        this.logBlockedAction('DEV_TOOLS_BLOCKED', { key: 'Ctrl+Shift+I' });
-        this.showBlockedNotification('Developer tools are not allowed during the test.');
+        this.handleDeveloperToolsViolation('Ctrl+Shift+I');
         return false;
       }
       
@@ -294,8 +292,15 @@ class SecurityEnforcer {
       if (e.ctrlKey && e.shiftKey && e.keyCode === 74) {
         e.preventDefault();
         e.stopPropagation();
-        this.logBlockedAction('DEV_TOOLS_BLOCKED', { key: 'Ctrl+Shift+J' });
-        this.showBlockedNotification('Developer tools are not allowed during the test.');
+        this.handleDeveloperToolsViolation('Ctrl+Shift+J');
+        return false;
+      }
+      
+      // Ctrl+Shift+C
+      if (e.ctrlKey && e.shiftKey && e.keyCode === 67) {
+        e.preventDefault();
+        e.stopPropagation();
+        this.handleDeveloperToolsViolation('Ctrl+Shift+C');
         return false;
       }
       
@@ -303,14 +308,149 @@ class SecurityEnforcer {
       if (e.ctrlKey && e.keyCode === 85) {
         e.preventDefault();
         e.stopPropagation();
-        this.logBlockedAction('VIEW_SOURCE_BLOCKED', { key: 'Ctrl+U' });
-        this.showBlockedNotification('View source is not allowed during the test.');
+        this.handleDeveloperToolsViolation('Ctrl+U');
         return false;
       }
     };
     
     document.addEventListener('keydown', listener, true);
     this.eventListeners.set('keydown-devtools', listener);
+    
+    // Start continuous developer tools detection
+    this.startDeveloperToolsDetection();
+  }
+
+  startDeveloperToolsDetection() {
+    let devToolsOpen = false;
+    let detectionCount = 0;
+    
+    // Method 1: Console detection
+    const originalLog = console.log;
+    const originalClear = console.clear;
+    const originalDir = console.dir;
+    
+    console.log = function() {
+      detectionCount++;
+      if (detectionCount > 3) {
+        devToolsOpen = true;
+      }
+      originalLog.apply(console, arguments);
+    };
+    
+    console.clear = function() {
+      devToolsOpen = true;
+      detectionCount += 5;
+      originalClear.apply(console, arguments);
+    };
+    
+    // Method 2: Window size detection (enhanced)
+    let threshold = 80;
+    const checkWindowSize = () => {
+      if (window.outerHeight - window.innerHeight > threshold || 
+          window.outerWidth - window.innerWidth > threshold) {
+        devToolsOpen = true;
+        detectionCount += 3;
+      }
+    };
+    
+    // Method 3: Debug detection with console.dir
+    const element = new Image();
+    Object.defineProperty(element, 'id', {
+      get: function() {
+        devToolsOpen = true;
+        detectionCount += 10;
+      }
+    });
+    
+    // Method 4: Performance timing detection
+    const performanceCheck = () => {
+      const start = performance.now();
+      debugger; // This will pause if dev tools are open
+      const end = performance.now();
+      
+      if (end - start > 100) {
+        devToolsOpen = true;
+        detectionCount += 15;
+      }
+    };
+    
+    // Method 5: Viewport change detection
+    let lastInnerWidth = window.innerWidth;
+    let lastInnerHeight = window.innerHeight;
+    
+    const checkViewportChanges = () => {
+      if (Math.abs(window.innerWidth - lastInnerWidth) > 100 || 
+          Math.abs(window.innerHeight - lastInnerHeight) > 100) {
+        devToolsOpen = true;
+        detectionCount += 2;
+      }
+      lastInnerWidth = window.innerWidth;
+      lastInnerHeight = window.innerHeight;
+    };
+    
+    // Method 6: Right-click detection
+    document.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      devToolsOpen = true;
+      detectionCount += 5;
+      this.handleDeveloperToolsViolation('Right-click');
+      return false;
+    });
+    
+    // Enhanced monitoring loop
+    const monitoringInterval = setInterval(() => {
+      try {
+        checkWindowSize();
+        checkViewportChanges();
+        console.dir(element);
+        performanceCheck();
+        
+        if (devToolsOpen || detectionCount > 10) {
+          clearInterval(monitoringInterval);
+          this.handleDeveloperToolsViolation('Detection methods');
+        }
+      } catch (error) {
+        // If any detection method fails, it might indicate tampering
+        detectionCount += 5;
+      }
+    }, 200);
+    
+    // Store interval for cleanup
+    this.devToolsMonitoringInterval = monitoringInterval;
+  }
+
+  async handleDeveloperToolsViolation(method) {
+    try {
+      // Log the critical violation
+      await this.logBlockedAction('DEVELOPER_TOOLS_VIOLATION', { 
+        method: method,
+        url: window.location.href,
+        timestamp: Date.now(),
+        severity: 'CRITICAL'
+      });
+
+      // Send message to background script for emergency response
+      chrome.runtime.sendMessage({
+        action: 'DEVELOPER_TOOLS_DETECTED',
+        data: {
+          method: method,
+          url: window.location.href,
+          userAgent: navigator.userAgent,
+          timestamp: Date.now()
+        }
+      });
+
+      // Show critical alert
+      alert('CRITICAL SECURITY VIOLATION: Developer tools detected. Exam session will be terminated.');
+      
+      // Redirect immediately
+      window.location.href = 'https://examroom.ai/devtooltrying';
+      
+    } catch (error) {
+      console.error('Error handling developer tools violation:', error);
+      // Even if logging fails, still redirect
+      window.location.href = 'https://examroom.ai/devtooltrying';
+    }
   }
 
   blockPrintScreen() {

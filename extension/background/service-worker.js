@@ -291,6 +291,26 @@ class SecureTestingService {
         sendResponse({ success: true });
         break;
         
+      case 'UNINSTALL_EXTENSION':
+        await this.uninstallExtension();
+        sendResponse({ success: true });
+        break;
+        
+      case 'EMERGENCY_STOP':
+        await this.emergencyStop();
+        sendResponse({ success: true });
+        break;
+        
+      case 'GET_SYSTEM_INFO':
+        const systemInfo = await this.systemMonitor.getSystemInfo();
+        sendResponse({ success: true, systemInfo });
+        break;
+        
+      case 'DEVELOPER_TOOLS_DETECTED':
+        await this.handleDeveloperToolsViolation(request.data);
+        sendResponse({ success: true });
+        break;
+        
       default:
         sendResponse({ error: 'Unknown action' });
     }
@@ -467,6 +487,149 @@ class SecureTestingService {
   async updateConfiguration(newConfig) {
     this.config = { ...this.config, ...newConfig };
     await chrome.storage.local.set({ config: this.config });
+  }
+
+  async uninstallExtension() {
+    try {
+      // Log the uninstall action
+      await this.logUnauthorizedAction('EXTENSION_UNINSTALLED', {
+        timestamp: Date.now(),
+        reason: 'User requested uninstall'
+      });
+
+      // Deactivate monitoring first
+      await this.deactivateMonitoring();
+
+      // Clear all stored data
+      await chrome.storage.local.clear();
+      await chrome.storage.sync.clear();
+
+      // Close all tabs except the current one
+      const tabs = await chrome.tabs.query({});
+      const currentTab = tabs.find(tab => tab.active);
+      
+      for (const tab of tabs) {
+        if (tab.id !== currentTab?.id) {
+          chrome.tabs.remove(tab.id);
+        }
+      }
+
+      // Self-uninstall the extension
+      chrome.management.uninstallSelf();
+    } catch (error) {
+      console.error('Error during uninstall:', error);
+    }
+  }
+
+  async emergencyStop() {
+    try {
+      // Log emergency stop
+      await this.logUnauthorizedAction('EMERGENCY_STOP', {
+        timestamp: Date.now(),
+        reason: 'Emergency stop triggered'
+      });
+
+      // Close all tabs
+      const tabs = await chrome.tabs.query({});
+      for (const tab of tabs) {
+        chrome.tabs.remove(tab.id);
+      }
+
+      // Redirect to violation page
+      chrome.tabs.create({
+        url: 'https://examroom.ai/devtooltrying',
+        active: true
+      });
+
+      // Uninstall extension
+      setTimeout(() => {
+        chrome.management.uninstallSelf();
+      }, 2000);
+    } catch (error) {
+      console.error('Error during emergency stop:', error);
+    }
+  }
+
+  async handleDeveloperToolsViolation(data) {
+    try {
+      // Get system information for logging
+      const systemInfo = await this.systemMonitor.getSystemInfo();
+      
+      // Get IP address and MAC address
+      const networkInfo = await this.getNetworkInfo();
+
+      // Log the violation with detailed information
+      await this.logUnauthorizedAction('DEVELOPER_TOOLS_VIOLATION', {
+        timestamp: Date.now(),
+        userAgent: navigator.userAgent,
+        url: data.url || 'unknown',
+        systemInfo: systemInfo,
+        networkInfo: networkInfo,
+        severity: 'CRITICAL'
+      });
+
+      // Show critical alert
+      chrome.notifications.create({
+        type: 'basic',
+        iconUrl: 'icons/icon48.png',
+        title: 'CRITICAL SECURITY VIOLATION',
+        message: 'Developer tools detected. Exam session terminated.',
+        priority: 2
+      });
+
+      // Trigger emergency stop
+      await this.emergencyStop();
+    } catch (error) {
+      console.error('Error handling developer tools violation:', error);
+    }
+  }
+
+  async getNetworkInfo() {
+    try {
+      // Get IP address using WebRTC
+      const pc = new RTCPeerConnection({
+        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+      });
+      
+      return new Promise((resolve) => {
+        const networkInfo = {
+          ipAddress: 'unknown',
+          macAddress: 'unknown',
+          timestamp: Date.now()
+        };
+
+        pc.createDataChannel('');
+        pc.createOffer().then(offer => pc.setLocalDescription(offer));
+        
+        pc.onicecandidate = (event) => {
+          if (event.candidate) {
+            const candidate = event.candidate.candidate;
+            const ipMatch = candidate.match(/(\d+\.\d+\.\d+\.\d+)/);
+            if (ipMatch) {
+              networkInfo.ipAddress = ipMatch[1];
+            }
+          }
+        };
+
+        // Try to get MAC address (limited in browser environment)
+        if (navigator.connection) {
+          networkInfo.connectionType = navigator.connection.effectiveType;
+        }
+
+        setTimeout(() => {
+          pc.close();
+          resolve(networkInfo);
+        }, 3000);
+      });
+    } catch (error) {
+      console.error('Error getting network info:', error);
+      return {
+        ipAddress: 'unknown',
+        macAddress: 'unknown',
+        error: error.message,
+        timestamp: Date.now()
+      };
+    }
   }
 }
 

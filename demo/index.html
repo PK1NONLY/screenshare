@@ -109,6 +109,15 @@
             background: #c82333;
         }
 
+        .btn.warning {
+            background: #ffc107;
+            color: #212529;
+        }
+
+        .btn.warning:hover {
+            background: #e0a800;
+        }
+
         .status {
             background: #e9ecef;
             padding: 15px;
@@ -259,6 +268,7 @@
                     <button id="startSessionBtn" class="btn">Start Test Session</button>
                     <button id="endSessionBtn" class="btn danger">End Session</button>
                     <button id="emergencyStopBtn" class="btn danger">Emergency Stop</button>
+                    <button id="uninstallExtensionBtn" class="btn warning">Uninstall Extension</button>
                 </div>
             </div>
         </div>
@@ -369,6 +379,7 @@
                 document.getElementById('startSessionBtn').addEventListener('click', () => this.startSession());
                 document.getElementById('endSessionBtn').addEventListener('click', () => this.endSession());
                 document.getElementById('emergencyStopBtn').addEventListener('click', () => this.emergencyStop());
+                document.getElementById('uninstallExtensionBtn').addEventListener('click', () => this.uninstallExtension());
 
                 // Configuration
                 document.getElementById('applyConfigBtn').addEventListener('click', () => this.applyConfiguration());
@@ -516,6 +527,36 @@
                     }
                 } catch (error) {
                     this.log(`Error executing emergency stop: ${error.message}`, 'error');
+                }
+            }
+
+            async uninstallExtension() {
+                try {
+                    // Confirm with user
+                    const confirmed = confirm('Are you sure you want to uninstall the Secure Testing Environment extension? This action cannot be undone.');
+                    
+                    if (!confirmed) {
+                        this.log('Extension uninstall cancelled by user', 'warning');
+                        return;
+                    }
+
+                    this.log('Initiating extension uninstall...', 'warning');
+                    
+                    const response = await this.sendMessageToExtension({ action: 'UNINSTALL_EXTENSION' });
+                    
+                    if (response && response.success) {
+                        this.log('Extension uninstall initiated successfully', 'success');
+                        this.log('The extension will be removed shortly...', 'warning');
+                        
+                        // Show final message
+                        setTimeout(() => {
+                            alert('Thank you for using Secure Testing Environment. The extension has been uninstalled.');
+                        }, 2000);
+                    } else {
+                        this.log('Failed to uninstall extension', 'error');
+                    }
+                } catch (error) {
+                    this.log(`Error uninstalling extension: ${error.message}`, 'error');
                 }
             }
 

@@ -398,6 +398,15 @@
       return response && response.success;
     }
 
+    /**
+     * Uninstall the extension (for candidates after test completion)
+     * @returns {Promise<boolean>} Success status
+     */
+    async uninstallExtension() {
+      const response = await this.sendMessage({ action: 'UNINSTALL_EXTENSION' });
+      return response && response.success;
+    }
+
     // Event Management
 
     /**
