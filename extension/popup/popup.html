@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Testing Environment</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="popup-container">
+        <header class="popup-header">
+            <div class="logo">
+                <img src="../icons/icon32.png" alt="STE" class="logo-icon">
+                <h1>Secure Testing Environment</h1>
+            </div>
+            <div class="status-indicator" id="statusIndicator">
+                <span class="status-dot" id="statusDot"></span>
+                <span class="status-text" id="statusText">Inactive</span>
+            </div>
+        </header>
+
+        <main class="popup-content">
+            <!-- Control Panel -->
+            <section class="control-panel">
+                <div class="control-buttons">
+                    <button id="activateBtn" class="btn btn-primary">Activate Monitoring</button>
+                    <button id="deactivateBtn" class="btn btn-secondary" disabled>Deactivate</button>
+                </div>
+            </section>
+
+            <!-- System Status -->
+            <section class="system-status">
+                <h3>System Status</h3>
+                <div class="status-grid">
+                    <div class="status-item">
+                        <span class="status-label">CPU Usage</span>
+                        <span class="status-value" id="cpuUsage">--</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Memory Usage</span>
+                        <span class="status-value" id="memoryUsage">--</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Battery Level</span>
+                        <span class="status-value" id="batteryLevel">--</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Displays</span>
+                        <span class="status-value" id="displayCount">--</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Security Status -->
+            <section class="security-status">
+                <h3>Security Status</h3>
+                <div class="security-checks">
+                    <div class="security-check" id="copyPasteCheck">
+                        <span class="check-icon">🔒</span>
+                        <span class="check-label">Copy/Paste Blocked</span>
+                        <span class="check-status">✓</span>
+                    </div>
+                    <div class="security-check" id="newTabCheck">
+                        <span class="check-icon">🚫</span>
+                        <span class="check-label">New Tabs Blocked</span>
+                        <span class="check-status">✓</span>
+                    </div>
+                    <div class="security-check" id="screenshotCheck">
+                        <span class="check-icon">📷</span>
+                        <span class="check-label">Screenshots Blocked</span>
+                        <span class="check-status">✓</span>
+                    </div>
+                    <div class="security-check" id="multiDisplayCheck">
+                        <span class="check-icon">🖥️</span>
+                        <span class="check-label">Single Display</span>
+                        <span class="check-status">✓</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Recent Activity -->
+            <section class="recent-activity">
+                <h3>Recent Activity</h3>
+                <div class="activity-list" id="activityList">
+                    <div class="activity-item">
+                        <span class="activity-time">--:--</span>
+                        <span class="activity-text">No recent activity</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Session Info -->
+            <section class="session-info" id="sessionInfo" style="display: none;">
+                <h3>Session Information</h3>
+                <div class="session-details">
+                    <div class="session-item">
+                        <span class="session-label">Session ID</span>
+                        <span class="session-value" id="sessionId">--</span>
+                    </div>
+                    <div class="session-item">
+                        <span class="session-label">Candidate ID</span>
+                        <span class="session-value" id="candidateId">--</span>
+                    </div>
+                    <div class="session-item">
+                        <span class="session-label">Time Remaining</span>
+                        <span class="session-value" id="timeRemaining">--</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Statistics -->
+            <section class="statistics">
+                <h3>Statistics</h3>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <span class="stat-value" id="blockedActions">0</span>
+                        <span class="stat-label">Blocked Actions</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="keystrokes">0</span>
+                        <span class="stat-label">Keystrokes</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="pageInteractions">0</span>
+                        <span class="stat-label">Page Interactions</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="uptime">0m</span>
+                        <span class="stat-label">Uptime</span>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="popup-footer">
+            <div class="footer-buttons">
+                <button id="settingsBtn" class="btn btn-link">Settings</button>
+                <button id="reportBtn" class="btn btn-link">Generate Report</button>
+                <button id="helpBtn" class="btn btn-link">Help</button>
+            </div>
+            <div class="version-info">
+                <span id="versionInfo">v1.0.0</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading...</div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div class="notification-toast" id="notificationToast" style="display: none;">
+        <div class="toast-content">
+            <span class="toast-icon" id="toastIcon">ℹ️</span>
+            <span class="toast-message" id="toastMessage">Notification message</span>
+        </div>
+        <button class="toast-close" id="toastClose">&times;</button>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>
