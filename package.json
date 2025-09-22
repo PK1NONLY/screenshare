@@ -1,0 +1,31 @@
+{
+  "name": "secure-testing-environment",
+  "version": "1.0.0",
+  "description": "Comprehensive security extension for examination environments with monitoring and restriction capabilities",
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0"
+  },
+  "jest": {
+    "testEnvironment": "jsdom",
+    "setupFilesAfterEnv": ["<rootDir>/tests/setup.js"],
+    "testMatch": [
+      "<rootDir>/tests/**/*.test.js"
+    ],
+    "collectCoverageFrom": [
+      "extension/**/*.js",
+      "!extension/icons/**",
+      "!extension/manifest.json"
+    ],
+    "coverageDirectory": "coverage",
+    "coverageReporters": ["text", "lcov", "html"],
+    "globals": {
+      "chrome": {}
+    }
+  }
+}
