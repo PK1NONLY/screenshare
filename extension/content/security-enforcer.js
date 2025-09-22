@@ -1,5 +1,8 @@
 // Security enforcement content script for Secure Testing Environment
 
+// Cross-browser API compatibility
+const getAPI = () => typeof browser !== 'undefined' ? browser : chrome;
+
 class SecurityEnforcer {
   constructor() {
     this.isActive = false;
@@ -17,7 +20,7 @@ class SecurityEnforcer {
     await this.loadConfiguration();
     
     // Set up message listener
-    chrome.runtime.onMessage.addListener(this.handleMessage.bind(this));
+    getAPI().runtime.onMessage.addListener(this.handleMessage.bind(this));
     
     // Start enforcement if active
     if (this.isActive) {
@@ -27,7 +30,7 @@ class SecurityEnforcer {
 
   async loadConfiguration() {
     try {
-      const response = await chrome.runtime.sendMessage({ action: 'GET_STATUS' });
+      const response = await getAPI().runtime.sendMessage({ action: 'GET_STATUS' });
       this.isActive = response.isActive;
       this.config = response.config;
     } catch (error) {
@@ -430,7 +433,7 @@ class SecurityEnforcer {
       });
 
       // Send message to background script for emergency response
-      chrome.runtime.sendMessage({
+      getAPI().runtime.sendMessage({
         action: 'DEVELOPER_TOOLS_DETECTED',
         data: {
           method: method,
@@ -657,7 +660,7 @@ class SecurityEnforcer {
     window.STELogger?.warn(`Blocked action: ${type}`, data);
     
     try {
-      await chrome.runtime.sendMessage({
+      await getAPI().runtime.sendMessage({
         action: 'LOG_UNAUTHORIZED_ACTION',
         type: type,
         data: {

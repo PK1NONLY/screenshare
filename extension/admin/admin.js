@@ -1,5 +1,8 @@
 // Admin panel script for Secure Testing Environment
 
+// Cross-browser API compatibility
+const getAPI = () => typeof browser !== 'undefined' ? browser : chrome;
+
 class AdminPanel {
   constructor() {
     this.config = null;
@@ -116,7 +119,7 @@ class AdminPanel {
     try {
       this.showLoading(true);
       
-      const response = await chrome.runtime.sendMessage({ action: 'GET_CONFIG' });
+      const response = await getAPI().runtime.sendMessage({ action: 'GET_CONFIG' });
       
       if (response && response.config) {
         this.config = response.config;
@@ -446,7 +449,7 @@ class AdminPanel {
       this.showLoading(true);
       this.updateConfigFromForm();
       
-      const response = await chrome.runtime.sendMessage({
+      const response = await getAPI().runtime.sendMessage({
         action: 'UPDATE_CONFIG',
         config: this.config
       });
@@ -472,7 +475,7 @@ class AdminPanel {
     try {
       this.showLoading(true);
       
-      const response = await chrome.runtime.sendMessage({
+      const response = await getAPI().runtime.sendMessage({
         action: 'RESET_CONFIG'
       });
       
@@ -556,7 +559,7 @@ class AdminPanel {
         autoSubmit
       };
       
-      const response = await chrome.runtime.sendMessage({
+      const response = await getAPI().runtime.sendMessage({
         action: 'START_SESSION',
         sessionData
       });
@@ -604,7 +607,7 @@ class AdminPanel {
     try {
       this.showLoading(true);
       
-      const response = await chrome.runtime.sendMessage({
+      const response = await getAPI().runtime.sendMessage({
         action: 'END_SESSION'
       });
       
@@ -681,8 +684,8 @@ class AdminPanel {
   }
 
   setDebugInfo() {
-    const manifest = chrome.runtime.getManifest();
-    document.getElementById('extensionId').textContent = chrome.runtime.id;
+    const manifest = getAPI().runtime.getManifest();
+    document.getElementById('extensionId').textContent = getAPI().runtime.id;
     document.getElementById('extensionVersion').textContent = manifest.version;
     document.getElementById('userAgent').textContent = navigator.userAgent;
   }

@@ -1,6 +1,9 @@
-// Main service worker for Secure Testing Environment
-import './system-monitor.js';
-import './config-manager.js';
+// Main background script for Secure Testing Environment (Firefox)
+// Note: Firefox Manifest V2 doesn't support ES6 modules in background scripts
+// Dependencies are loaded via manifest.json scripts array
+
+// Cross-browser API compatibility
+const getAPI = () => typeof browser !== 'undefined' ? browser : chrome;
 
 class SecureTestingService {
   constructor() {
@@ -29,7 +32,8 @@ class SecureTestingService {
 
   async loadConfiguration() {
     try {
-      const result = await chrome.storage.local.get(['config', 'isActive']);
+      const api = getAPI();
+      const result = await api.storage.local.get(['config', 'isActive']);
       this.config = result.config || this.getDefaultConfig();
       this.isActive = result.isActive || false;
     } catch (error) {
@@ -66,33 +70,43 @@ class SecureTestingService {
   }
 
   setupEventListeners() {
+    const api = getAPI();
+    
     // Tab management
-    chrome.tabs.onCreated.addListener(this.handleTabCreated.bind(this));
-    chrome.tabs.onUpdated.addListener(this.handleTabUpdated.bind(this));
-    chrome.tabs.onRemoved.addListener(this.handleTabRemoved.bind(this));
-    chrome.tabs.onActivated.addListener(this.handleTabActivated.bind(this));
+    api.tabs.onCreated.addListener(this.handleTabCreated.bind(this));
+    api.tabs.onUpdated.addListener(this.handleTabUpdated.bind(this));
+    api.tabs.onRemoved.addListener(this.handleTabRemoved.bind(this));
+    api.tabs.onActivated.addListener(this.handleTabActivated.bind(this));
 
     // Window management
-    chrome.windows.onCreated.addListener(this.handleWindowCreated.bind(this));
-    chrome.windows.onFocusChanged.addListener(this.handleWindowFocusChanged.bind(this));
+    api.windows.onCreated.addListener(this.handleWindowCreated.bind(this));
+    api.windows.onFocusChanged.addListener(this.handleWindowFocusChanged.bind(this));
 
     // Extension management
-    chrome.management.onEnabled.addListener(this.handleExtensionEnabled.bind(this));
-    chrome.management.onDisabled.addListener(this.handleExtensionDisabled.bind(this));
-    chrome.management.onInstalled.addListener(this.handleExtensionInstalled.bind(this));
+    if (api.management) {
+      api.management.onEnabled.addListener(this.handleExtensionEnabled.bind(this));
+      api.management.onDisabled.addListener(this.handleExtensionDisabled.bind(this));
+      api.management.onInstalled.addListener(this.handleExtensionInstalled.bind(this));
+    }
 
     // Web navigation
-    chrome.webNavigation.onBeforeNavigate.addListener(this.handleNavigation.bind(this));
+    api.webNavigation.onBeforeNavigate.addListener(this.handleNavigation.bind(this));
 
     // Message handling
-    chrome.runtime.onMessage.addListener(this.handleMessage.bind(this));
-    chrome.runtime.onMessageExternal.addListener(this.handleExternalMessage.bind(this));
+    api.runtime.onMessage.addListener(this.handleMessage.bind(this));
+    if (api.runtime.onMessageExternal) {
+      api.runtime.onMessageExternal.addListener(this.handleExternalMessage.bind(this));
+    }
 
     // Keyboard shortcuts
-    chrome.commands.onCommand.addListener(this.handleCommand.bind(this));
+    if (api.commands) {
+      api.commands.onCommand.addListener(this.handleCommand.bind(this));
+    }
 
-    // Desktop capture
-    chrome.desktopCapture.onStarted.addListener(this.handleScreenCaptureStarted.bind(this));
+    // Desktop capture (Chrome-specific, not available in Firefox)
+    if (api.desktopCapture && api.desktopCapture.onStarted) {
+      api.desktopCapture.onStarted.addListener(this.handleScreenCaptureStarted.bind(this));
+    }
   }
 
   async handleTabCreated(tab) {
@@ -110,10 +124,10 @@ class SecureTestingService {
         });
         
         // Close the unauthorized tab
-        chrome.tabs.remove(tab.id);
+        getAPI().tabs.remove(tab.id);
         
         // Show notification
-        chrome.notifications.create({
+        getAPI().notifications.create({
           type: 'basic',
           iconUrl: 'icons/icon48.png',
           title: 'Unauthorized Action Blocked',
@@ -141,9 +155,9 @@ class SecureTestingService {
         });
         
         // Block navigation to unauthorized URL
-        chrome.tabs.update(tabId, { url: 'about:blank' });
+        getAPI().tabs.update(tabId, { url: 'about:blank' });
         
-        chrome.notifications.create({
+        getAPI().notifications.create({
           type: 'basic',
           iconUrl: 'icons/icon48.png',
           title: 'Navigation Blocked',
@@ -178,21 +192,21 @@ class SecureTestingService {
       });
       
       // Close unauthorized window
-      chrome.windows.remove(window.id);
+      getAPI().windows.remove(window.id);
     }
   }
 
   async handleWindowFocusChanged(windowId) {
     if (!this.isActive) return;
 
-    if (windowId === chrome.windows.WINDOW_ID_NONE) {
+    if (windowId === (getAPI().windows.WINDOW_ID_NONE || -1)) {
       // User switched to another application
       if (this.config.restrictions.blockAppSwitching) {
         await this.logUnauthorizedAction('APP_SWITCH_DETECTED', {
           timestamp: Date.now()
         });
         
-        chrome.notifications.create({
+        getAPI().notifications.create({
           type: 'basic',
           iconUrl: 'icons/icon48.png',
           title: 'Unauthorized Action Detected',
@@ -207,7 +221,7 @@ class SecureTestingService {
 
     const isAllowed = this.config.allowedExtensions.includes(info.id);
     
-    if (!isAllowed && info.id !== chrome.runtime.id) {
+    if (!isAllowed && info.id !== getAPI().runtime.id) {
       await this.logUnauthorizedAction('EXTENSION_ENABLED', {
         extensionId: info.id,
         extensionName: info.name,
@@ -215,9 +229,9 @@ class SecureTestingService {
       });
       
       // Disable unauthorized extension
-      chrome.management.setEnabled(info.id, false);
+      getAPI().management.setEnabled(info.id, false);
       
-      chrome.notifications.create({
+      getAPI().notifications.create({
         type: 'basic',
         iconUrl: 'icons/icon48.png',
         title: 'Extension Blocked',
@@ -227,7 +241,7 @@ class SecureTestingService {
   }
 
   async handleExtensionDisabled(info) {
-    if (info.id === chrome.runtime.id) {
+    if (info.id === getAPI().runtime.id) {
       // Our extension is being disabled - log this as critical
       await this.logUnauthorizedAction('SECURITY_EXTENSION_DISABLED', {
         timestamp: Date.now()
@@ -323,8 +337,8 @@ class SecureTestingService {
     if (request.action === 'INTEGRATE_EXTENSION') {
       sendResponse({
         success: true,
-        extensionId: chrome.runtime.id,
-        version: chrome.runtime.getManifest().version
+        extensionId: getAPI().runtime.id,
+        version: getAPI().runtime.getManifest().version
       });
     }
     
@@ -338,6 +352,7 @@ class SecureTestingService {
         break;
       
       case '_execute_action':
+      case '_execute_browser_action':
         // This is handled by the browser automatically (opens popup)
         break;
         
@@ -365,7 +380,7 @@ class SecureTestingService {
         timestamp: Date.now()
       });
       
-      chrome.notifications.create({
+      getAPI().notifications.create({
         type: 'basic',
         iconUrl: 'icons/icon48.png',
         title: 'Screen Capture Blocked',
@@ -390,27 +405,33 @@ class SecureTestingService {
     this.config = { ...this.config, ...config };
     this.isActive = true;
     
-    await chrome.storage.local.set({
+    await getAPI().storage.local.set({
       config: this.config,
       isActive: this.isActive
     });
     
     this.startMonitoring();
     
-    // Disable unauthorized extensions
-    const extensions = await chrome.management.getAll();
-    for (const ext of extensions) {
-      if (ext.enabled && 
-          ext.id !== chrome.runtime.id && 
-          !this.config.allowedExtensions.includes(ext.id)) {
-        chrome.management.setEnabled(ext.id, false);
+    // Disable unauthorized extensions (if management API is available)
+    if (getAPI().management) {
+      try {
+        const extensions = await getAPI().management.getAll();
+        for (const ext of extensions) {
+          if (ext.enabled && 
+              ext.id !== getAPI().runtime.id && 
+              !this.config.allowedExtensions.includes(ext.id)) {
+            getAPI().management.setEnabled(ext.id, false);
+          }
+        }
+      } catch (error) {
+        console.log('Management API not available or restricted:', error.message);
       }
     }
   }
 
   async deactivateMonitoring() {
     this.isActive = false;
-    await chrome.storage.local.set({ isActive: false });
+    await getAPI().storage.local.set({ isActive: false });
     
     if (this.monitoringInterval) {
       clearInterval(this.monitoringInterval);
@@ -434,7 +455,7 @@ class SecureTestingService {
       if (navigator.getBattery) {
         const battery = await navigator.getBattery();
         if (battery.level < (this.config.monitoring.batteryThreshold / 100)) {
-          chrome.notifications.create({
+          getAPI().notifications.create({
             type: 'basic',
             iconUrl: 'icons/icon48.png',
             title: 'Low Battery Warning',
@@ -443,14 +464,18 @@ class SecureTestingService {
         }
       }
       
-      // Check for multiple displays
-      if (this.config.restrictions.blockMultipleMonitors) {
-        const displays = await chrome.system.display.getInfo();
-        if (displays.length > 1) {
-          await this.logUnauthorizedAction('MULTIPLE_DISPLAYS_DETECTED', {
-            displayCount: displays.length,
-            timestamp: Date.now()
-          });
+      // Check for multiple displays (Chrome only - not available in Firefox)
+      if (this.config.restrictions.blockMultipleMonitors && getAPI().system && getAPI().system.display) {
+        try {
+          const displays = await getAPI().system.display.getInfo();
+          if (displays.length > 1) {
+            await this.logUnauthorizedAction('MULTIPLE_DISPLAYS_DETECTED', {
+              displayCount: displays.length,
+              timestamp: Date.now()
+            });
+          }
+        } catch (error) {
+          console.log('Display API not available (Firefox):', error.message);
         }
       }
       
@@ -491,14 +516,14 @@ class SecureTestingService {
     }
     
     // Store locally as backup
-    await chrome.storage.local.set({
+    await getAPI().storage.local.set({
       unauthorizedActions: this.unauthorizedActions
     });
   }
 
   async updateConfiguration(newConfig) {
     this.config = { ...this.config, ...newConfig };
-    await chrome.storage.local.set({ config: this.config });
+    await getAPI().storage.local.set({ config: this.config });
   }
 
   async uninstallExtension() {
@@ -513,21 +538,21 @@ class SecureTestingService {
       await this.deactivateMonitoring();
 
       // Clear all stored data
-      await chrome.storage.local.clear();
-      await chrome.storage.sync.clear();
+      await getAPI().storage.local.clear();
+      await getAPI().storage.sync.clear();
 
       // Close all tabs except the current one
-      const tabs = await chrome.tabs.query({});
+      const tabs = await getAPI().tabs.query({});
       const currentTab = tabs.find(tab => tab.active);
       
       for (const tab of tabs) {
         if (tab.id !== currentTab?.id) {
-          chrome.tabs.remove(tab.id);
+          getAPI().tabs.remove(tab.id);
         }
       }
 
       // Self-uninstall the extension
-      chrome.management.uninstallSelf();
+      getAPI().management.uninstallSelf();
     } catch (error) {
       console.error('Error during uninstall:', error);
     }
@@ -542,20 +567,20 @@ class SecureTestingService {
       });
 
       // Close all tabs
-      const tabs = await chrome.tabs.query({});
+      const tabs = await getAPI().tabs.query({});
       for (const tab of tabs) {
-        chrome.tabs.remove(tab.id);
+        getAPI().tabs.remove(tab.id);
       }
 
       // Redirect to violation page
-      chrome.tabs.create({
+      getAPI().tabs.create({
         url: 'https://examroom.ai/devtooltrying',
         active: true
       });
 
       // Uninstall extension
       setTimeout(() => {
-        chrome.management.uninstallSelf();
+        getAPI().management.uninstallSelf();
       }, 2000);
     } catch (error) {
       console.error('Error during emergency stop:', error);
@@ -581,7 +606,7 @@ class SecureTestingService {
       });
 
       // Show critical alert
-      chrome.notifications.create({
+      getAPI().notifications.create({
         type: 'basic',
         iconUrl: 'icons/icon48.png',
         title: 'CRITICAL SECURITY VIOLATION',

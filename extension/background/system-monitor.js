@@ -1,5 +1,8 @@
 // System monitoring utilities for Secure Testing Environment
 
+// Cross-browser API compatibility
+const getAPI = () => typeof browser !== 'undefined' ? browser : chrome;
+
 class SystemMonitor {
   constructor() {
     this.isMonitoring = false;
@@ -65,7 +68,7 @@ class SystemMonitor {
 
   async getCPUInfo() {
     try {
-      const cpuInfo = await chrome.system.cpu.getInfo();
+      const cpuInfo = await getAPI().system.cpu.getInfo();
       
       // Calculate average CPU usage
       let totalUsage = 0;
@@ -90,7 +93,7 @@ class SystemMonitor {
 
   async getMemoryInfo() {
     try {
-      const memoryInfo = await chrome.system.memory.getInfo();
+      const memoryInfo = await getAPI().system.memory.getInfo();
       
       this.systemData.memory = {
         total: memoryInfo.capacity,
@@ -132,7 +135,7 @@ class SystemMonitor {
 
   async getDisplayInfo() {
     try {
-      const displays = await chrome.system.display.getInfo();
+      const displays = await getAPI().system.display.getInfo();
       
       this.systemData.displays = displays.map(display => ({
         id: display.id,
@@ -153,7 +156,7 @@ class SystemMonitor {
     try {
       // Chrome extension API has limited access to system processes
       // We can only get Chrome-related processes
-      const processes = await chrome.processes.getProcessInfo([], true);
+      const processes = await getAPI().processes.getProcessInfo([], true);
       
       this.systemData.runningProcesses = Object.values(processes).map(process => ({
         id: process.id,
@@ -222,9 +225,9 @@ class SystemMonitor {
     
     if (batteryLevel < 50 && !this.systemData.battery.charging) {
       // Send message to content scripts to notify the integrated page
-      chrome.tabs.query({}, (tabs) => {
+      getAPI().tabs.query({}, (tabs) => {
         tabs.forEach(tab => {
-          chrome.tabs.sendMessage(tab.id, {
+          getAPI().tabs.sendMessage(tab.id, {
             action: 'BATTERY_WARNING',
             level: batteryLevel,
             charging: this.systemData.battery.charging
@@ -235,7 +238,7 @@ class SystemMonitor {
       });
       
       // Also show browser notification
-      chrome.notifications.create({
+      getAPI().notifications.create({
         type: 'basic',
         iconUrl: 'icons/icon48.png',
         title: 'Low Battery Warning',
@@ -455,9 +458,9 @@ class SystemMonitor {
     const batteryLevel = level * 100;
     
     // Send message to content scripts
-    chrome.tabs.query({}, (tabs) => {
+    getAPI().tabs.query({}, (tabs) => {
       tabs.forEach(tab => {
-        chrome.tabs.sendMessage(tab.id, {
+        getAPI().tabs.sendMessage(tab.id, {
           action: 'BATTERY_WARNING',
           level: batteryLevel,
           charging: this.systemData.battery.charging
@@ -468,7 +471,7 @@ class SystemMonitor {
     });
     
     // Show browser notification
-    chrome.notifications.create({
+    getAPI().notifications.create({
       type: 'basic',
       iconUrl: 'icons/icon48.png',
       title: 'Low Battery Warning',
@@ -489,9 +492,9 @@ class SystemMonitor {
     }
 
     // Send message to content scripts
-    chrome.tabs.query({}, (tabs) => {
+    getAPI().tabs.query({}, (tabs) => {
       tabs.forEach(tab => {
-        chrome.tabs.sendMessage(tab.id, {
+        getAPI().tabs.sendMessage(tab.id, {
           action: 'VIRTUAL_MACHINE_DETECTED',
           confidence: vmInfo.confidence,
           indicators: vmInfo.indicators
@@ -502,7 +505,7 @@ class SystemMonitor {
     });
     
     // Show critical notification
-    chrome.notifications.create({
+    getAPI().notifications.create({
       type: 'basic',
       iconUrl: 'icons/icon48.png',
       title: 'Virtual Machine Detected',

@@ -1,5 +1,8 @@
 // Popup script for Secure Testing Environment
 
+// Cross-browser API compatibility
+const getAPI = () => typeof browser !== 'undefined' ? browser : chrome;
+
 class PopupController {
   constructor() {
     this.isActive = false;
@@ -60,7 +63,7 @@ class PopupController {
       this.showLoading(true);
       
       // Get status from background script
-      const response = await chrome.runtime.sendMessage({ action: 'GET_STATUS' });
+      const response = await getAPI().runtime.sendMessage({ action: 'GET_STATUS' });
       
       if (response) {
         this.isActive = response.isActive;
@@ -69,7 +72,7 @@ class PopupController {
       }
       
       // Get system data
-      const systemResponse = await chrome.runtime.sendMessage({ action: 'GET_SYSTEM_DATA' });
+      const systemResponse = await getAPI().runtime.sendMessage({ action: 'GET_SYSTEM_DATA' });
       if (systemResponse) {
         this.systemData = systemResponse.systemData;
       }
@@ -248,7 +251,7 @@ class PopupController {
 
   async updateRecentActivity() {
     try {
-      const response = await chrome.runtime.sendMessage({ action: 'GET_RECENT_ACTIVITY' });
+      const response = await getAPI().runtime.sendMessage({ action: 'GET_RECENT_ACTIVITY' });
       const activityList = document.getElementById('activityList');
       
       if (response && response.activities && response.activities.length > 0) {
@@ -313,7 +316,7 @@ class PopupController {
   }
 
   updateVersionInfo() {
-    const manifest = chrome.runtime.getManifest();
+    const manifest = getAPI().runtime.getManifest();
     document.getElementById('versionInfo').textContent = `v${manifest.version}`;
   }
 
@@ -321,7 +324,7 @@ class PopupController {
     try {
       this.showLoading(true);
       
-      const response = await chrome.runtime.sendMessage({
+      const response = await getAPI().runtime.sendMessage({
         action: 'ACTIVATE_MONITORING',
         config: this.config || {}
       });
@@ -345,7 +348,7 @@ class PopupController {
     try {
       this.showLoading(true);
       
-      const response = await chrome.runtime.sendMessage({
+      const response = await getAPI().runtime.sendMessage({
         action: 'DEACTIVATE_MONITORING'
       });
       
@@ -365,8 +368,8 @@ class PopupController {
   }
 
   openSettings() {
-    chrome.tabs.create({
-      url: chrome.runtime.getURL('admin/admin.html')
+    getAPI().tabs.create({
+      url: getAPI().runtime.getURL('admin/admin.html')
     });
   }
 
@@ -374,7 +377,7 @@ class PopupController {
     try {
       this.showLoading(true);
       
-      const response = await chrome.runtime.sendMessage({
+      const response = await getAPI().runtime.sendMessage({
         action: 'GENERATE_REPORT'
       });
       
@@ -404,7 +407,7 @@ class PopupController {
   }
 
   openHelp() {
-    chrome.tabs.create({
+    getAPI().tabs.create({
       url: 'https://github.com/your-repo/secure-testing-environment/wiki'
     });
   }

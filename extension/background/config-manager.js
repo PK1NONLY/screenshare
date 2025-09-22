@@ -1,5 +1,8 @@
 // Configuration management for Secure Testing Environment
 
+// Cross-browser API compatibility
+const getAPI = () => typeof browser !== 'undefined' ? browser : chrome;
+
 class ConfigManager {
   constructor() {
     this.config = null;
@@ -10,8 +13,8 @@ class ConfigManager {
   getDefaultConfig() {
     return {
       // Basic settings
-      extensionId: chrome.runtime.id,
-      version: chrome.runtime.getManifest().version,
+      extensionId: getAPI().runtime.id,
+      version: getAPI().runtime.getManifest().version,
       
       // URL restrictions
       allowedUrls: [
@@ -95,7 +98,7 @@ class ConfigManager {
 
   async loadConfig() {
     try {
-      const result = await chrome.storage.local.get(['config']);
+      const result = await getAPI().storage.local.get(['config']);
       
       if (result.config) {
         this.config = this.mergeConfigs(this.defaultConfig, result.config);
@@ -114,7 +117,7 @@ class ConfigManager {
 
   async saveConfig() {
     try {
-      await chrome.storage.local.set({ config: this.config });
+      await getAPI().storage.local.set({ config: this.config });
       this.notifyConfigUpdate();
       return true;
     } catch (error) {

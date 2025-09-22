@@ -1,5 +1,8 @@
 // Logging utility for Secure Testing Environment
 
+// Cross-browser API compatibility
+const getAPI = () => typeof browser !== 'undefined' ? browser : chrome;
+
 class Logger {
   constructor() {
     this.logs = [];
@@ -68,7 +71,7 @@ class Logger {
 
   sendToBackground(logEntry) {
     try {
-      chrome.runtime.sendMessage({
+      getAPI().runtime.sendMessage({
         action: 'LOG_ENTRY',
         logEntry: logEntry
       }).catch(() => {

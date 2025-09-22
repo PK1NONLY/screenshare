@@ -1,5 +1,8 @@
 // Page monitoring content script for Secure Testing Environment
 
+// Cross-browser API compatibility
+const getAPI = () => typeof browser !== 'undefined' ? browser : chrome;
+
 class PageMonitor {
   constructor() {
     this.isActive = false;
@@ -25,7 +28,7 @@ class PageMonitor {
     await this.loadConfiguration();
     
     // Set up message listener
-    chrome.runtime.onMessage.addListener(this.handleMessage.bind(this));
+    getAPI().runtime.onMessage.addListener(this.handleMessage.bind(this));
     
     // Start monitoring if active
     if (this.isActive) {
@@ -35,7 +38,7 @@ class PageMonitor {
 
   async loadConfiguration() {
     try {
-      const response = await chrome.runtime.sendMessage({ action: 'GET_STATUS' });
+      const response = await getAPI().runtime.sendMessage({ action: 'GET_STATUS' });
       this.isActive = response.isActive;
       this.config = response.config;
     } catch (error) {
@@ -432,7 +435,7 @@ class PageMonitor {
       /vnc/i,
       /rdp/i,
       /anydesk/i,
-      /chrome.*remote/i
+      /getAPI().*remote/i
     ];
     
     const text = (element.textContent || element.innerHTML || '').toLowerCase();
@@ -467,7 +470,7 @@ class PageMonitor {
     window.STELogger?.warn(`Suspicious activity detected: ${type}`, data);
     
     try {
-      await chrome.runtime.sendMessage({
+      await getAPI().runtime.sendMessage({
         action: 'LOG_UNAUTHORIZED_ACTION',
         type: type,
         data: {

@@ -1,5 +1,8 @@
 // Keyboard tracking content script for Secure Testing Environment
 
+// Cross-browser API compatibility
+const getAPI = () => typeof browser !== 'undefined' ? browser : chrome;
+
 class KeyboardTracker {
   constructor() {
     this.isActive = false;
@@ -18,7 +21,7 @@ class KeyboardTracker {
     await this.loadConfiguration();
     
     // Set up message listener
-    chrome.runtime.onMessage.addListener(this.handleMessage.bind(this));
+    getAPI().runtime.onMessage.addListener(this.handleMessage.bind(this));
     
     // Start tracking if active
     if (this.isActive) {
@@ -28,7 +31,7 @@ class KeyboardTracker {
 
   async loadConfiguration() {
     try {
-      const response = await chrome.runtime.sendMessage({ action: 'GET_STATUS' });
+      const response = await getAPI().runtime.sendMessage({ action: 'GET_STATUS' });
       this.isActive = response.isActive;
       this.config = response.config;
       
@@ -292,7 +295,7 @@ class KeyboardTracker {
     window.STELogger?.warn(`Blocked key combination: ${keyCombo}`, keystroke);
     
     try {
-      await chrome.runtime.sendMessage({
+      await getAPI().runtime.sendMessage({
         action: 'LOG_UNAUTHORIZED_ACTION',
         type: 'BLOCKED_KEY_COMBINATION',
         data: {
@@ -321,7 +324,7 @@ class KeyboardTracker {
     window.STELogger?.warn(`Suspicious pattern detected: ${type}`, data);
     
     try {
-      await chrome.runtime.sendMessage({
+      await getAPI().runtime.sendMessage({
         action: 'LOG_UNAUTHORIZED_ACTION',
         type: 'SUSPICIOUS_KEYBOARD_PATTERN',
         data: pattern
@@ -391,7 +394,7 @@ class KeyboardTracker {
     if (this.keystrokes.length === 0) return;
     
     try {
-      await chrome.runtime.sendMessage({
+      await getAPI().runtime.sendMessage({
         action: 'STORE_KEYSTROKES',
         keystrokes: this.keystrokes.slice() // Send copy
       });
