@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Testing Environment - Demo Integration</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 0;
+            text-align: center;
+            margin-bottom: 30px;
+            border-radius: 10px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .section {
+            background: white;
+            padding: 30px;
+            margin-bottom: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .section h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.8rem;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .control-group {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+
+        .control-group h3 {
+            margin-bottom: 15px;
+            color: #495057;
+        }
+
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.2s;
+            margin: 5px;
+        }
+
+        .btn:hover {
+            background: #5a6fd8;
+        }
+
+        .btn.secondary {
+            background: #6c757d;
+        }
+
+        .btn.secondary:hover {
+            background: #5a6268;
+        }
+
+        .btn.danger {
+            background: #dc3545;
+        }
+
+        .btn.danger:hover {
+            background: #c82333;
+        }
+
+        .status {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 14px;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 5px;
+            border-radius: 3px;
+        }
+
+        .log-entry.info {
+            background: #d1ecf1;
+        }
+
+        .log-entry.success {
+            background: #d4edda;
+        }
+
+        .log-entry.error {
+            background: #f8d7da;
+        }
+
+        .log-entry.warning {
+            background: #fff3cd;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #e9ecef;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Secure Testing Environment</h1>
+            <p>Demo Integration Page</p>
+        </div>
+
+        <!-- Extension Status -->
+        <div class="section">
+            <h2>Extension Status</h2>
+            <div id="extensionStatus" class="status">Checking extension availability...</div>
+            <button id="checkExtensionBtn" class="btn">Check Extension</button>
+            <button id="getInfoBtn" class="btn secondary">Get Extension Info</button>
+        </div>
+
+        <!-- Quick Start -->
+        <div class="section">
+            <h2>Quick Start</h2>
+            <div class="controls">
+                <div class="control-group">
+                    <h3>Basic Controls</h3>
+                    <button id="activateBtn" class="btn">Activate Monitoring</button>
+                    <button id="deactivateBtn" class="btn secondary">Deactivate Monitoring</button>
+                    <button id="getStatusBtn" class="btn secondary">Get Status</button>
+                </div>
+                <div class="control-group">
+                    <h3>Session Management</h3>
+                    <button id="startSessionBtn" class="btn">Start Test Session</button>
+                    <button id="endSessionBtn" class="btn danger">End Session</button>
+                    <button id="emergencyStopBtn" class="btn danger">Emergency Stop</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Configuration -->
+        <div class="section">
+            <h2>Configuration</h2>
+            <div class="form-group">
+                <label>Allowed URLs (one per line):</label>
+                <textarea id="allowedUrls" rows="4" placeholder="https://example.com/*&#10;https://test.com/*"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label>Security Restrictions:</label>
+                <div class="checkbox-group">
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="blockCopyPaste" checked>
+                        <label for="blockCopyPaste">Block Copy/Paste</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="blockNewTabs" checked>
+                        <label for="blockNewTabs">Block New Tabs</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="blockScreenshots" checked>
+                        <label for="blockScreenshots">Block Screenshots</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="blockMultipleMonitors" checked>
+                        <label for="blockMultipleMonitors">Block Multiple Monitors</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Session Configuration:</label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <input type="text" id="sessionId" placeholder="Session ID">
+                    <input type="text" id="candidateId" placeholder="Candidate ID">
+                    <input type="text" id="examId" placeholder="Exam ID">
+                    <input type="number" id="duration" placeholder="Duration (minutes)" value="120">
+                </div>
+            </div>
+
+            <button id="applyConfigBtn" class="btn">Apply Configuration</button>
+            <button id="createTestSessionBtn" class="btn">Create Test Session</button>
+        </div>
+
+        <!-- System Information -->
+        <div class="section">
+            <h2>System Information</h2>
+            <div class="stats-grid" id="systemStats">
+                <div class="stat-card">
+                    <span class="stat-value" id="cpuUsage">--</span>
+                    <div class="stat-label">CPU Usage</div>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value" id="memoryUsage">--</span>
+                    <div class="stat-label">Memory Usage</div>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value" id="batteryLevel">--</span>
+                    <div class="stat-label">Battery Level</div>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value" id="displayCount">--</span>
+                    <div class="stat-label">Displays</div>
+                </div>
+            </div>
+            <button id="getSystemInfoBtn" class="btn secondary">Refresh System Info</button>
+            <button id="checkSecurityBtn" class="btn secondary">Check Security Status</button>
+        </div>
+
+        <!-- Activity Log -->
+        <div class="section">
+            <h2>Activity Log</h2>
+            <div id="activityLog" class="log">
+                <div class="log-entry info">Demo page loaded. Install and activate the Secure Testing Environment extension to begin.</div>
+            </div>
+            <button id="clearLogBtn" class="btn secondary">Clear Log</button>
+        </div>
+    </div>
+
+    <script>
+        // Demo application logic
+        class STEDemo {
+            constructor() {
+                this.extensionId = 'your-extension-id-here'; // Replace with actual extension ID
+                this.init();
+            }
+
+            init() {
+                this.setupEventListeners();
+                this.checkExtensionStatus();
+            }
+
+            setupEventListeners() {
+                // Extension status
+                document.getElementById('checkExtensionBtn').addEventListener('click', () => this.checkExtensionStatus());
+                document.getElementById('getInfoBtn').addEventListener('click', () => this.getExtensionInfo());
+
+                // Basic controls
+                document.getElementById('activateBtn').addEventListener('click', () => this.activateMonitoring());
+                document.getElementById('deactivateBtn').addEventListener('click', () => this.deactivateMonitoring());
+                document.getElementById('getStatusBtn').addEventListener('click', () => this.getStatus());
+
+                // Session management
+                document.getElementById('startSessionBtn').addEventListener('click', () => this.startSession());
+                document.getElementById('endSessionBtn').addEventListener('click', () => this.endSession());
+                document.getElementById('emergencyStopBtn').addEventListener('click', () => this.emergencyStop());
+
+                // Configuration
+                document.getElementById('applyConfigBtn').addEventListener('click', () => this.applyConfiguration());
+                document.getElementById('createTestSessionBtn').addEventListener('click', () => this.createTestSession());
+
+                // System information
+                document.getElementById('getSystemInfoBtn').addEventListener('click', () => this.getSystemInfo());
+                document.getElementById('checkSecurityBtn').addEventListener('click', () => this.checkSecurityStatus());
+
+                // Activity log
+                document.getElementById('clearLogBtn').addEventListener('click', () => this.clearLog());
+            }
+
+            async sendMessageToExtension(message) {
+                try {
+                    const response = await chrome.runtime.sendMessage(this.extensionId, message);
+                    return response;
+                } catch (error) {
+                    this.log(`Extension communication error: ${error.message}`, 'error');
+                    return null;
+                }
+            }
+
+            async checkExtensionStatus() {
+                const statusEl = document.getElementById('extensionStatus');
+                
+                try {
+                    const response = await this.sendMessageToExtension({ action: 'PING' });
+                    
+                    if (response && response.success) {
+                        statusEl.textContent = 'Extension is available and connected';
+                        statusEl.className = 'status success';
+                        this.log('Extension connection verified', 'success');
+                    } else {
+                        statusEl.textContent = 'Extension not responding';
+                        statusEl.className = 'status error';
+                        this.log('Extension not responding', 'error');
+                    }
+                } catch (error) {
+                    statusEl.textContent = 'Extension not installed or not available';
+                    statusEl.className = 'status error';
+                    this.log('Extension not available', 'error');
+                }
+            }
+
+            async getExtensionInfo() {
+                try {
+                    const response = await this.sendMessageToExtension({ action: 'GET_EXTENSION_INFO' });
+                    if (response) {
+                        this.log(`Extension info: ${JSON.stringify(response, null, 2)}`, 'info');
+                    }
+                } catch (error) {
+                    this.log(`Failed to get extension info: ${error.message}`, 'error');
+                }
+            }
+
+            async activateMonitoring() {
+                try {
+                    const response = await this.sendMessageToExtension({ 
+                        action: 'ACTIVATE_MONITORING',
+                        config: this.getConfigFromForm()
+                    });
+                    
+                    if (response && response.success) {
+                        this.log('Monitoring activated successfully', 'success');
+                    } else {
+                        this.log('Failed to activate monitoring', 'error');
+                    }
+                } catch (error) {
+                    this.log(`Error activating monitoring: ${error.message}`, 'error');
+                }
+            }
+
+            async deactivateMonitoring() {
+                try {
+                    const response = await this.sendMessageToExtension({ action: 'DEACTIVATE_MONITORING' });
+                    
+                    if (response && response.success) {
+                        this.log('Monitoring deactivated successfully', 'success');
+                    } else {
+                        this.log('Failed to deactivate monitoring', 'error');
+                    }
+                } catch (error) {
+                    this.log(`Error deactivating monitoring: ${error.message}`, 'error');
+                }
+            }
+
+            async getStatus() {
+                try {
+                    const response = await this.sendMessageToExtension({ action: 'GET_STATUS' });
+                    if (response) {
+                        this.log(`Status: ${JSON.stringify(response, null, 2)}`, 'info');
+                    }
+                } catch (error) {
+                    this.log(`Error getting status: ${error.message}`, 'error');
+                }
+            }
+
+            async startSession() {
+                try {
+                    const sessionData = {
+                        sessionId: document.getElementById('sessionId').value || `demo_${Date.now()}`,
+                        candidateId: document.getElementById('candidateId').value || 'demo_candidate',
+                        examId: document.getElementById('examId').value || 'demo_exam',
+                        duration: (parseInt(document.getElementById('duration').value) || 120) * 60000
+                    };
+
+                    const response = await this.sendMessageToExtension({ 
+                        action: 'START_SESSION',
+                        sessionData: sessionData
+                    });
+                    
+                    if (response && response.success) {
+                        this.log(`Session started: ${sessionData.sessionId}`, 'success');
+                    } else {
+                        this.log('Failed to start session', 'error');
+                    }
+                } catch (error) {
+                    this.log(`Error starting session: ${error.message}`, 'error');
+                }
+            }
+
+            async endSession() {
+                try {
+                    const response = await this.sendMessageToExtension({ action: 'END_SESSION' });
+                    
+                    if (response && response.success) {
+                        this.log('Session ended successfully', 'success');
+                    } else {
+                        this.log('Failed to end session', 'error');
+                    }
+                } catch (error) {
+                    this.log(`Error ending session: ${error.message}`, 'error');
+                }
+            }
+
+            async emergencyStop() {
+                try {
+                    const response = await this.sendMessageToExtension({ action: 'EMERGENCY_STOP' });
+                    
+                    if (response && response.success) {
+                        this.log('Emergency stop executed', 'warning');
+                    } else {
+                        this.log('Failed to execute emergency stop', 'error');
+                    }
+                } catch (error) {
+                    this.log(`Error executing emergency stop: ${error.message}`, 'error');
+                }
+            }
+
+            getConfigFromForm() {
+                const urls = document.getElementById('allowedUrls').value
+                    .split('\n')
+                    .map(url => url.trim())
+                    .filter(url => url.length > 0);
+
+                return {
+                    allowedUrls: urls,
+                    restrictions: {
+                        blockCopyPaste: document.getElementById('blockCopyPaste').checked,
+                        blockNewTabs: document.getElementById('blockNewTabs').checked,
+                        blockScreenshots: document.getElementById('blockScreenshots').checked,
+                        blockMultipleMonitors: document.getElementById('blockMultipleMonitors').checked
+                    }
+                };
+            }
+
+            async applyConfiguration() {
+                try {
+                    const config = this.getConfigFromForm();
+                    const response = await this.sendMessageToExtension({ 
+                        action: 'UPDATE_CONFIG',
+                        config: config
+                    });
+                    
+                    if (response && response.success) {
+                        this.log('Configuration applied successfully', 'success');
+                    } else {
+                        this.log('Failed to apply configuration', 'error');
+                    }
+                } catch (error) {
+                    this.log(`Error applying configuration: ${error.message}`, 'error');
+                }
+            }
+
+            async createTestSession() {
+                try {
+                    const sessionData = {
+                        sessionId: document.getElementById('sessionId').value || `demo_${Date.now()}`,
+                        candidateId: document.getElementById('candidateId').value || 'demo_candidate',
+                        examId: document.getElementById('examId').value || 'demo_exam',
+                        duration: (parseInt(document.getElementById('duration').value) || 120) * 60000
+                    };
+
+                    const config = this.getConfigFromForm();
+
+                    // Apply configuration first
+                    await this.sendMessageToExtension({ 
+                        action: 'UPDATE_CONFIG',
+                        config: config
+                    });
+
+                    // Start session
+                    const sessionResponse = await this.sendMessageToExtension({ 
+                        action: 'START_SESSION',
+                        sessionData: sessionData
+                    });
+
+                    // Activate monitoring
+                    const activateResponse = await this.sendMessageToExtension({ 
+                        action: 'ACTIVATE_MONITORING',
+                        config: config
+                    });
+
+                    if (sessionResponse && sessionResponse.success && activateResponse && activateResponse.success) {
+                        this.log(`Test session created and activated: ${sessionData.sessionId}`, 'success');
+                    } else {
+                        this.log('Failed to create complete test session', 'error');
+                    }
+                } catch (error) {
+                    this.log(`Error creating test session: ${error.message}`, 'error');
+                }
+            }
+
+            async getSystemInfo() {
+                try {
+                    const response = await this.sendMessageToExtension({ action: 'GET_SYSTEM_INFO' });
+                    
+                    if (response && response.systemInfo) {
+                        const systemInfo = response.systemInfo;
+                        
+                        document.getElementById('cpuUsage').textContent = 
+                            systemInfo.cpu ? `${systemInfo.cpu.usage.toFixed(1)}%` : '--';
+                        document.getElementById('memoryUsage').textContent = 
+                            systemInfo.memory ? `${systemInfo.memory.usage.toFixed(1)}%` : '--';
+                        document.getElementById('batteryLevel').textContent = 
+                            systemInfo.battery ? `${(systemInfo.battery.level * 100).toFixed(0)}%` : '--';
+                        document.getElementById('displayCount').textContent = 
+                            systemInfo.displays ? systemInfo.displays.length : '--';
+
+                        this.log(`System info updated`, 'success');
+                    }
+                } catch (error) {
+                    this.log(`Error getting system info: ${error.message}`, 'error');
+                }
+            }
+
+            async checkSecurityStatus() {
+                try {
+                    const response = await this.sendMessageToExtension({ action: 'GET_SECURITY_STATUS' });
+                    if (response) {
+                        this.log(`Security status: ${JSON.stringify(response, null, 2)}`, 'info');
+                    }
+                } catch (error) {
+                    this.log(`Error checking security status: ${error.message}`, 'error');
+                }
+            }
+
+            log(message, type = 'info') {
+                const logEl = document.getElementById('activityLog');
+                const entry = document.createElement('div');
+                entry.className = `log-entry ${type}`;
+                entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+                logEl.appendChild(entry);
+                logEl.scrollTop = logEl.scrollHeight;
+            }
+
+            clearLog() {
+                document.getElementById('activityLog').innerHTML = '';
+                this.log('Activity log cleared', 'info');
+            }
+        }
+
+        // Initialize demo when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new STEDemo();
+        });
+    </script>
+</body>
+</html>

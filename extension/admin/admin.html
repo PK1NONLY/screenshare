@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Testing Environment - Admin Panel</title>
+    <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+    <div class="admin-container">
+        <!-- Header -->
+        <header class="admin-header">
+            <div class="header-content">
+                <div class="logo">
+                    <img src="../icons/icon32.png" alt="STE" class="logo-icon">
+                    <h1>Secure Testing Environment</h1>
+                    <span class="subtitle">Admin Panel</span>
+                </div>
+                <div class="header-actions">
+                    <button id="saveConfigBtn" class="btn btn-primary">Save Configuration</button>
+                    <button id="resetConfigBtn" class="btn btn-secondary">Reset to Defaults</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="admin-nav">
+            <div class="nav-tabs">
+                <button class="nav-tab active" data-tab="general">General Settings</button>
+                <button class="nav-tab" data-tab="security">Security Restrictions</button>
+                <button class="nav-tab" data-tab="monitoring">Monitoring</button>
+                <button class="nav-tab" data-tab="backend">Backend Integration</button>
+                <button class="nav-tab" data-tab="session">Session Management</button>
+                <button class="nav-tab" data-tab="advanced">Advanced</button>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="admin-content">
+            <!-- General Settings Tab -->
+            <div class="tab-content active" id="general-tab">
+                <div class="section">
+                    <h2>Allowed URLs</h2>
+                    <p class="section-description">Configure which URLs candidates are allowed to access during the test. Use * for wildcards.</p>
+                    <div class="url-manager">
+                        <div class="input-group">
+                            <input type="text" id="newUrlInput" placeholder="Enter URL (e.g., https://example.com/*)" class="form-input">
+                            <button id="addUrlBtn" class="btn btn-primary">Add URL</button>
+                        </div>
+                        <div class="url-list" id="urlList">
+                            <!-- URLs will be populated here -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>Allowed Extensions</h2>
+                    <p class="section-description">Specify which Chrome extensions are permitted during the test.</p>
+                    <div class="extension-manager">
+                        <div class="input-group">
+                            <input type="text" id="newExtensionInput" placeholder="Extension ID" class="form-input">
+                            <button id="addExtensionBtn" class="btn btn-primary">Add Extension</button>
+                        </div>
+                        <div class="extension-list" id="extensionList">
+                            <!-- Extensions will be populated here -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>Notifications</h2>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="showWarnings" class="form-checkbox">
+                            <span class="checkmark"></span>
+                            Show warning notifications
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="showBlocked" class="form-checkbox">
+                            <span class="checkmark"></span>
+                            Show blocked action notifications
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="soundEnabled" class="form-checkbox">
+                            <span class="checkmark"></span>
+                            Enable notification sounds
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Security Restrictions Tab -->
+            <div class="tab-content" id="security-tab">
+                <div class="section">
+                    <h2>Basic Restrictions</h2>
+                    <div class="restrictions-grid">
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="blockCopyPaste" class="form-checkbox">
+                                <span class="checkmark"></span>
+                                Block copy/paste operations
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="blockNewTabs" class="form-checkbox">
+                                <span class="checkmark"></span>
+                                Block new tab creation
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="blockScreenshots" class="form-checkbox">
+                                <span class="checkmark"></span>
+                                Block screenshots and screen recording
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="blockMinimize" class="form-checkbox">
+                                <span class="checkmark"></span>
+                                Block browser minimization
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="blockAppSwitching" class="form-checkbox">
+                                <span class="checkmark"></span>
+                                Block application switching
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="blockMultipleMonitors" class="form-checkbox">
+                                <span class="checkmark"></span>
+                                Block multiple monitors
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="blockScreenSharing" class="form-checkbox">
+                                <span class="checkmark"></span>
+                                Block screen sharing
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="blockBluetoothDevices" class="form-checkbox">
+                                <span class="checkmark"></span>
+                                Block Bluetooth devices
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>Interface Restrictions</h2>
+                    <div class="restrictions-grid">
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="blockDevTools" class="form-checkbox">
+                                <span class="checkmark"></span>
+                                Block developer tools
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="blockPrintScreen" class="form-checkbox">
+                                <span class="checkmark"></span>
+                                Block print screen key
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="blockRightClick" class="form-checkbox">
+                                <span class="checkmark"></span>
+                                Block right-click context menu
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="blockTextSelection" class="form-checkbox">
+                                <span class="checkmark"></span>
+                                Block text selection
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="blockDragDrop" class="form-checkbox">
+                                <span class="checkmark"></span>
+                                Block drag and drop
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Monitoring Tab -->
+            <div class="tab-content" id="monitoring-tab">
+                <div class="section">
+                    <h2>Activity Monitoring</h2>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="trackKeystrokes" class="form-checkbox">
+                            <span class="checkmark"></span>
+                            Track keyboard activity
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="trackMouseMovements" class="form-checkbox">
+                            <span class="checkmark"></span>
+                            Track mouse movements
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="trackSystemUsage" class="form-checkbox">
+                            <span class="checkmark"></span>
+                            Monitor system resource usage
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="trackRunningApps" class="form-checkbox">
+                            <span class="checkmark"></span>
+                            Track running applications
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="trackNetworkActivity" class="form-checkbox">
+                            <span class="checkmark"></span>
+                            Monitor network activity
+                        </label>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>Alert Thresholds</h2>
+                    <div class="form-group">
+                        <label class="form-label">Battery Level Threshold (%)</label>
+                        <input type="number" id="batteryThreshold" class="form-input" min="0" max="100" value="50">
+                        <small class="form-help">Alert when battery level drops below this percentage</small>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">CPU Usage Threshold (%)</label>
+                        <input type="number" id="cpuThreshold" class="form-input" min="0" max="100" value="80">
+                        <small class="form-help">Alert when CPU usage exceeds this percentage</small>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Memory Usage Threshold (%)</label>
+                        <input type="number" id="memoryThreshold" class="form-input" min="0" max="100" value="90">
+                        <small class="form-help">Alert when memory usage exceeds this percentage</small>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Monitoring Interval (seconds)</label>
+                        <input type="number" id="monitoringInterval" class="form-input" min="1" max="60" value="5">
+                        <small class="form-help">How often to check system status</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Backend Integration Tab -->
+            <div class="tab-content" id="backend-tab">
+                <div class="section">
+                    <h2>API Configuration</h2>
+                    <div class="form-group">
+                        <label class="form-label">Backend API URL</label>
+                        <input type="url" id="apiUrl" class="form-input" placeholder="https://api.example.com">
+                        <small class="form-help">URL of your backend API for configuration and logging</small>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">API Key</label>
+                        <input type="password" id="apiKey" class="form-input" placeholder="Enter API key">
+                        <small class="form-help">Authentication key for backend API</small>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Request Timeout (ms)</label>
+                        <input type="number" id="apiTimeout" class="form-input" min="1000" max="60000" value="10000">
+                        <small class="form-help">Maximum time to wait for API responses</small>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Retry Attempts</label>
+                        <input type="number" id="retryAttempts" class="form-input" min="0" max="10" value="3">
+                        <small class="form-help">Number of times to retry failed API calls</small>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>Synchronization</h2>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="enableRealTimeSync" class="form-checkbox">
+                            <span class="checkmark"></span>
+                            Enable real-time synchronization
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Sync Interval (seconds)</label>
+                        <input type="number" id="syncInterval" class="form-input" min="10" max="300" value="30">
+                        <small class="form-help">How often to sync with backend</small>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>Test Connection</h2>
+                    <button id="testConnectionBtn" class="btn btn-primary">Test Backend Connection</button>
+                    <div id="connectionStatus" class="connection-status"></div>
+                </div>
+            </div>
+
+            <!-- Session Management Tab -->
+            <div class="tab-content" id="session-tab">
+                <div class="section">
+                    <h2>Current Session</h2>
+                    <div class="session-info" id="currentSession">
+                        <div class="session-item">
+                            <label>Session ID:</label>
+                            <span id="currentSessionId">Not active</span>
+                        </div>
+                        <div class="session-item">
+                            <label>Candidate ID:</label>
+                            <span id="currentCandidateId">--</span>
+                        </div>
+                        <div class="session-item">
+                            <label>Start Time:</label>
+                            <span id="currentStartTime">--</span>
+                        </div>
+                        <div class="session-item">
+                            <label>Duration:</label>
+                            <span id="currentDuration">--</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>Start New Session</h2>
+                    <div class="form-group">
+                        <label class="form-label">Session ID</label>
+                        <input type="text" id="newSessionId" class="form-input" placeholder="Enter session ID">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Candidate ID</label>
+                        <input type="text" id="newCandidateId" class="form-input" placeholder="Enter candidate ID">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Exam ID</label>
+                        <input type="text" id="newExamId" class="form-input" placeholder="Enter exam ID">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Duration (minutes)</label>
+                        <input type="number" id="sessionDuration" class="form-input" min="1" max="480" placeholder="120">
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="autoSubmit" class="form-checkbox">
+                            <span class="checkmark"></span>
+                            Auto-submit when time expires
+                        </label>
+                    </div>
+                    <div class="session-actions">
+                        <button id="startSessionBtn" class="btn btn-primary">Start Session</button>
+                        <button id="endSessionBtn" class="btn btn-secondary">End Current Session</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Advanced Tab -->
+            <div class="tab-content" id="advanced-tab">
+                <div class="section">
+                    <h2>Advanced Security</h2>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="enableVirtualMachine" class="form-checkbox">
+                            <span class="checkmark"></span>
+                            Enable virtual machine detection
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="blockVirtualKeyboard" class="form-checkbox">
+                            <span class="checkmark"></span>
+                            Block virtual keyboard
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="blockScreenReader" class="form-checkbox">
+                            <span class="checkmark"></span>
+                            Block screen reader (accessibility consideration)
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="enableBiometricVerification" class="form-checkbox">
+                            <span class="checkmark"></span>
+                            Enable biometric verification
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="requireCameraAccess" class="form-checkbox">
+                            <span class="checkmark"></span>
+                            Require camera access
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="enableProctoring" class="form-checkbox">
+                            <span class="checkmark"></span>
+                            Enable AI proctoring
+                        </label>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>Configuration Management</h2>
+                    <div class="config-actions">
+                        <button id="exportConfigBtn" class="btn btn-secondary">Export Configuration</button>
+                        <button id="importConfigBtn" class="btn btn-secondary">Import Configuration</button>
+                        <input type="file" id="importConfigFile" accept=".json" style="display: none;">
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>Debug Information</h2>
+                    <div class="debug-info">
+                        <div class="debug-item">
+                            <label>Extension ID:</label>
+                            <span id="extensionId">--</span>
+                        </div>
+                        <div class="debug-item">
+                            <label>Version:</label>
+                            <span id="extensionVersion">--</span>
+                        </div>
+                        <div class="debug-item">
+                            <label>User Agent:</label>
+                            <span id="userAgent">--</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Loading...</div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div class="notification-toast" id="notificationToast" style="display: none;">
+        <div class="toast-content">
+            <span class="toast-icon" id="toastIcon">ℹ️</span>
+            <span class="toast-message" id="toastMessage">Notification message</span>
+        </div>
+        <button class="toast-close" id="toastClose">&times;</button>
+    </div>
+
+    <script src="admin.js"></script>
+</body>
+</html>
