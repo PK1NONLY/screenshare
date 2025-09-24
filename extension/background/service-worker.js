@@ -1,11 +1,5 @@
 // Main service worker for Secure Testing Environment
-// Import other modules using importScripts for compatibility
-try {
-  importScripts('./system-monitor.js', './config-manager.js');
-  console.log('[STE] Service Worker: Dependencies loaded successfully');
-} catch (error) {
-  console.error('[STE] Service Worker: Failed to load dependencies:', error);
-}
+console.log('[STE] Service Worker: Starting initialization...');
 
 class SecureTestingService {
   constructor() {
@@ -24,21 +18,57 @@ class SecureTestingService {
     try {
       console.log('[STE] Service Worker: Initializing...');
       
-      // Check if dependencies are available
-      if (!self.systemMonitor) {
-        console.error('[STE] Service Worker: SystemMonitor not available');
-      } else {
-        console.log('[STE] Service Worker: SystemMonitor available');
-      }
+      // Initialize built-in system monitoring
+      this.systemMonitor = {
+        getSystemInfo: async () => {
+          try {
+            const systemInfo = {
+              timestamp: Date.now(),
+              userAgent: navigator.userAgent,
+              platform: navigator.platform,
+              language: navigator.language,
+              cookieEnabled: navigator.cookieEnabled,
+              onLine: navigator.onLine
+            };
+            
+            // Get display info if available
+            try {
+              const displays = await chrome.system.display.getInfo();
+              systemInfo.displays = displays;
+              systemInfo.displayCount = displays.length;
+            } catch (e) {
+              systemInfo.displays = [];
+              systemInfo.displayCount = 0;
+            }
+            
+            // Get CPU info if available
+            try {
+              const cpu = await chrome.system.cpu.getInfo();
+              systemInfo.cpu = cpu;
+            } catch (e) {
+              systemInfo.cpu = null;
+            }
+            
+            // Get memory info if available
+            try {
+              const memory = await chrome.system.memory.getInfo();
+              systemInfo.memory = memory;
+            } catch (e) {
+              systemInfo.memory = null;
+            }
+            
+            return systemInfo;
+          } catch (error) {
+            console.error('[STE] Error getting system info:', error);
+            return {
+              timestamp: Date.now(),
+              error: error.message
+            };
+          }
+        }
+      };
       
-      if (!self.configManager) {
-        console.error('[STE] Service Worker: ConfigManager not available');
-      } else {
-        console.log('[STE] Service Worker: ConfigManager available');
-      }
-      
-      // Initialize system monitor reference
-      this.systemMonitor = self.systemMonitor;
+      console.log('[STE] Service Worker: Built-in system monitor initialized');
       
       // Load configuration from storage
       console.log('[STE] Service Worker: Loading configuration...');

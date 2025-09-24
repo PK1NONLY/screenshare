@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extension Loading Test</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status-card { 
+            margin: 15px 0; 
+            padding: 15px; 
+            border-radius: 5px; 
+            border-left: 4px solid #ccc;
+        }
+        .success { 
+            background: #d4edda; 
+            color: #155724; 
+            border-left-color: #28a745;
+        }
+        .error { 
+            background: #f8d7da; 
+            color: #721c24; 
+            border-left-color: #dc3545;
+        }
+        .warning { 
+            background: #fff3cd; 
+            color: #856404; 
+            border-left-color: #ffc107;
+        }
+        .info { 
+            background: #d1ecf1; 
+            color: #0c5460; 
+            border-left-color: #17a2b8;
+        }
+        button { 
+            margin: 5px; 
+            padding: 10px 15px; 
+            border: none;
+            border-radius: 4px;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover { background: #0056b3; }
+        .code { 
+            background: #f8f9fa; 
+            padding: 10px; 
+            border-radius: 4px; 
+            font-family: monospace;
+            margin: 10px 0;
+            white-space: pre-wrap;
+        }
+        .step {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        .step h3 {
+            margin-top: 0;
+            color: #495057;
+        }
+        #log {
+            background: #000;
+            color: #0f0;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Extension Loading Test</h1>
+        <p>This page will test if the extension loads properly after the service worker fix.</p>
+        
+        <div class="step">
+            <h3>Automatic Tests</h3>
+            <div id="auto-results" class="status-card info">
+                <strong>Running automatic tests...</strong>
+            </div>
+        </div>
+        
+        <div class="step">
+            <h3>Manual Service Worker Check</h3>
+            <button onclick="checkServiceWorker()">Check Service Worker</button>
+            <div id="service-worker-results" class="status-card info">
+                <strong>Click the button above to check service worker</strong>
+            </div>
+        </div>
+        
+        <div class="step">
+            <h3>Extension Communication Test</h3>
+            <button onclick="testExtensionCommunication()">Test Communication</button>
+            <div id="communication-results" class="status-card info">
+                <strong>Click the button above to test extension communication</strong>
+            </div>
+        </div>
+        
+        <div class="step">
+            <h3>Console Log</h3>
+            <div id="log"></div>
+            <button onclick="clearLog()">Clear Log</button>
+        </div>
+        
+        <div class="step">
+            <h3>Instructions</h3>
+            <div class="status-card warning">
+                <strong>If tests fail:</strong><br>
+                1. Go to <code>chrome://extensions/</code><br>
+                2. Find "Secure Testing Environment" extension<br>
+                3. Click "Inspect views: service worker"<br>
+                4. Check Console tab for error messages<br>
+                5. Look for messages starting with [STE]<br>
+                6. If you see red errors, copy them and share for analysis
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${timestamp}] ${message}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(message);
+        }
+        
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+        
+        function updateStatus(elementId, message, className) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = message;
+            element.className = `status-card ${className}`;
+        }
+        
+        async function runAutomaticTests() {
+            log('Starting automatic tests...');
+            
+            // Test 1: Chrome object availability
+            if (typeof chrome === 'undefined') {
+                updateStatus('auto-results', '❌ Chrome object not available - Extension not loaded', 'error');
+                log('FAIL: Chrome object not available');
+                return;
+            }
+            log('PASS: Chrome object available');
+            
+            // Test 2: Chrome runtime
+            if (!chrome.runtime) {
+                updateStatus('auto-results', '❌ Chrome runtime not available', 'error');
+                log('FAIL: Chrome runtime not available');
+                return;
+            }
+            log('PASS: Chrome runtime available');
+            
+            // Test 3: Extension ID
+            try {
+                const extensionId = chrome.runtime.id;
+                log(`PASS: Extension ID: ${extensionId}`);
+            } catch (error) {
+                updateStatus('auto-results', `❌ Cannot get extension ID: ${error.message}`, 'error');
+                log(`FAIL: Cannot get extension ID: ${error.message}`);
+                return;
+            }
+            
+            // Test 4: Basic Chrome APIs
+            const apis = ['tabs', 'storage', 'notifications', 'system'];
+            let availableApis = 0;
+            let totalApis = apis.length;
+            
+            apis.forEach(api => {
+                if (chrome[api]) {
+                    log(`PASS: chrome.${api} available`);
+                    availableApis++;
+                } else {
+                    log(`FAIL: chrome.${api} not available`);
+                }
+            });
+            
+            // Test 5: Content script globals
+            const contentScripts = ['STELogger', 'STEKeyboardTracker', 'STESecurityEnforcer', 'STEPageMonitor'];
+            let loadedScripts = 0;
+            
+            contentScripts.forEach(script => {
+                if (window[script]) {
+                    log(`PASS: ${script} loaded`);
+                    loadedScripts++;
+                } else {
+                    log(`FAIL: ${script} not loaded`);
+                }
+            });
+            
+            // Summary
+            const apiPercentage = Math.round((availableApis / totalApis) * 100);
+            const scriptPercentage = Math.round((loadedScripts / contentScripts.length) * 100);
+            
+            let summaryMessage = `<strong>Test Results:</strong><br>`;
+            summaryMessage += `✅ Chrome APIs: ${availableApis}/${totalApis} (${apiPercentage}%)<br>`;
+            summaryMessage += `${loadedScripts > 0 ? '✅' : '❌'} Content Scripts: ${loadedScripts}/${contentScripts.length} (${scriptPercentage}%)<br>`;
+            
+            if (availableApis === totalApis && loadedScripts === contentScripts.length) {
+                summaryMessage += `<br>🎉 All tests passed! Extension is working properly.`;
+                updateStatus('auto-results', summaryMessage, 'success');
+            } else if (availableApis > 0) {
+                summaryMessage += `<br>⚠️ Extension partially loaded. Some features may not work.`;
+                updateStatus('auto-results', summaryMessage, 'warning');
+            } else {
+                summaryMessage += `<br>❌ Extension not loaded properly. Check installation.`;
+                updateStatus('auto-results', summaryMessage, 'error');
+            }
+            
+            log('Automatic tests completed');
+        }
+        
+        function checkServiceWorker() {
+            log('Checking service worker...');
+            
+            if (typeof chrome === 'undefined' || !chrome.runtime) {
+                updateStatus('service-worker-results', '❌ Chrome runtime not available', 'error');
+                log('FAIL: Chrome runtime not available');
+                return;
+            }
+            
+            try {
+                // Try to get extension info
+                const manifest = chrome.runtime.getManifest();
+                const extensionId = chrome.runtime.id;
+                const extensionUrl = chrome.runtime.getURL('');
+                
+                let message = `<strong>Service Worker Info:</strong><br>`;
+                message += `✅ Extension ID: ${extensionId}<br>`;
+                message += `✅ Extension URL: ${extensionUrl}<br>`;
+                message += `✅ Manifest: ${manifest.name} v${manifest.version}<br>`;
+                message += `✅ Service Worker: ${manifest.background.service_worker}<br>`;
+                
+                updateStatus('service-worker-results', message, 'success');
+                log('PASS: Service worker info retrieved successfully');
+                
+            } catch (error) {
+                updateStatus('service-worker-results', `❌ Error checking service worker: ${error.message}`, 'error');
+                log(`FAIL: Error checking service worker: ${error.message}`);
+            }
+        }
+        
+        async function testExtensionCommunication() {
+            log('Testing extension communication...');
+            
+            if (typeof chrome === 'undefined' || !chrome.runtime) {
+                updateStatus('communication-results', '❌ Chrome runtime not available', 'error');
+                log('FAIL: Chrome runtime not available for communication test');
+                return;
+            }
+            
+            try {
+                // Test ping message
+                const response = await new Promise((resolve, reject) => {
+                    chrome.runtime.sendMessage({ action: 'PING' }, (response) => {
+                        if (chrome.runtime.lastError) {
+                            reject(new Error(chrome.runtime.lastError.message));
+                        } else {
+                            resolve(response);
+                        }
+                    });
+                });
+                
+                if (response && response.success) {
+                    let message = `<strong>Communication Test Results:</strong><br>`;
+                    message += `✅ Extension responds to messages<br>`;
+                    message += `✅ Extension ID: ${response.extensionId}<br>`;
+                    message += `✅ Version: ${response.version}<br>`;
+                    message += `✅ Active: ${response.isActive}<br>`;
+                    message += `✅ Initialized: ${response.isInitialized}<br>`;
+                    message += `✅ Timestamp: ${new Date(response.timestamp).toLocaleString()}<br>`;
+                    
+                    updateStatus('communication-results', message, 'success');
+                    log('PASS: Extension communication working');
+                } else {
+                    updateStatus('communication-results', '❌ Extension responded but with error', 'error');
+                    log('FAIL: Extension responded but with error');
+                }
+                
+            } catch (error) {
+                updateStatus('communication-results', `❌ Communication failed: ${error.message}`, 'error');
+                log(`FAIL: Communication failed: ${error.message}`);
+            }
+        }
+        
+        // Run automatic tests on page load
+        window.addEventListener('load', () => {
+            log('Page loaded, starting tests...');
+            setTimeout(runAutomaticTests, 1000);
+        });
+    </script>
+</body>
+</html>
