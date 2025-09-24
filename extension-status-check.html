@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extension Status Check</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status-card { 
+            margin: 15px 0; 
+            padding: 15px; 
+            border-radius: 5px; 
+            border-left: 4px solid #ccc;
+        }
+        .success { 
+            background: #d4edda; 
+            color: #155724; 
+            border-left-color: #28a745;
+        }
+        .error { 
+            background: #f8d7da; 
+            color: #721c24; 
+            border-left-color: #dc3545;
+        }
+        .warning { 
+            background: #fff3cd; 
+            color: #856404; 
+            border-left-color: #ffc107;
+        }
+        .info { 
+            background: #d1ecf1; 
+            color: #0c5460; 
+            border-left-color: #17a2b8;
+        }
+        button { 
+            margin: 5px; 
+            padding: 10px 15px; 
+            border: none;
+            border-radius: 4px;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover { background: #0056b3; }
+        .code { 
+            background: #f8f9fa; 
+            padding: 10px; 
+            border-radius: 4px; 
+            font-family: monospace;
+            margin: 10px 0;
+        }
+        .step {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        .step h3 {
+            margin-top: 0;
+            color: #495057;
+        }
+        .checklist {
+            list-style: none;
+            padding: 0;
+        }
+        .checklist li {
+            padding: 5px 0;
+            position: relative;
+            padding-left: 25px;
+        }
+        .checklist li:before {
+            content: "☐";
+            position: absolute;
+            left: 0;
+            font-size: 16px;
+        }
+        .checklist li.checked:before {
+            content: "☑";
+            color: #28a745;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Extension Status Check</h1>
+        <p>This page will help you verify if the Secure Testing Environment extension is properly installed and working.</p>
+        
+        <div class="step">
+            <h3>Step 1: Basic Environment Check</h3>
+            <div id="basic-check" class="status-card info">
+                <strong>Checking basic environment...</strong>
+            </div>
+        </div>
+        
+        <div class="step">
+            <h3>Step 2: Chrome Extension API Check</h3>
+            <div id="chrome-api-check" class="status-card info">
+                <strong>Checking Chrome extension APIs...</strong>
+            </div>
+        </div>
+        
+        <div class="step">
+            <h3>Step 3: Content Script Check</h3>
+            <button onclick="checkContentScripts()">Check Content Scripts</button>
+            <div id="content-script-check" class="status-card info">
+                <strong>Click the button above to check content scripts</strong>
+            </div>
+        </div>
+        
+        <div class="step">
+            <h3>Step 4: Extension Communication Check</h3>
+            <button onclick="checkExtensionCommunication()">Test Extension Communication</button>
+            <div id="extension-comm-check" class="status-card info">
+                <strong>Click the button above to test extension communication</strong>
+            </div>
+        </div>
+        
+        <div class="step">
+            <h3>Step 5: Manual Installation Verification</h3>
+            <div class="status-card warning">
+                <strong>Manual Steps Required:</strong>
+                <ol class="checklist" id="manual-checklist">
+                    <li>Open Chrome and go to <code>chrome://extensions/</code></li>
+                    <li>Look for "Secure Testing Environment" extension</li>
+                    <li>Verify the extension is enabled (toggle switch is ON)</li>
+                    <li>Check for any error messages under the extension</li>
+                    <li>If not installed, click "Load unpacked" and select the extension folder</li>
+                    <li>If installed but not working, click the reload button on the extension</li>
+                    <li>Refresh this page after making changes</li>
+                </ol>
+            </div>
+        </div>
+        
+        <div class="step">
+            <h3>Step 6: Troubleshooting</h3>
+            <div id="troubleshooting" class="status-card info">
+                <strong>Troubleshooting Tips:</strong>
+                <ul>
+                    <li><strong>Extension not found:</strong> Install it from the extension folder</li>
+                    <li><strong>Extension disabled:</strong> Enable it in chrome://extensions/</li>
+                    <li><strong>Content scripts not loading:</strong> Check for JavaScript errors in DevTools</li>
+                    <li><strong>Communication failing:</strong> Reload the extension and refresh this page</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="step">
+            <h3>Current Status Summary</h3>
+            <div id="status-summary" class="status-card info">
+                <strong>Status will be updated as you run the checks above</strong>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let statusSummary = {
+            basicEnvironment: 'unknown',
+            chromeAPI: 'unknown',
+            contentScripts: 'unknown',
+            extensionComm: 'unknown'
+        };
+        
+        // Step 1: Basic Environment Check
+        function checkBasicEnvironment() {
+            const result = document.getElementById('basic-check');
+            let html = '<strong>Basic Environment Check:</strong><br>';
+            
+            // Check if we're in a browser
+            if (typeof window !== 'undefined') {
+                html += '✅ Running in browser environment<br>';
+            } else {
+                html += '❌ Not running in browser environment<br>';
+                statusSummary.basicEnvironment = 'failed';
+                result.innerHTML = html;
+                result.className = 'status-card error';
+                return;
+            }
+            
+            // Check if we're on HTTPS or localhost
+            const isSecure = location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+            if (isSecure) {
+                html += '✅ Running on secure context<br>';
+            } else {
+                html += '⚠️ Not running on secure context (may affect some features)<br>';
+            }
+            
+            // Check user agent
+            if (navigator.userAgent.includes('Chrome')) {
+                html += '✅ Running on Chrome browser<br>';
+            } else {
+                html += '⚠️ Not running on Chrome (extension may not work)<br>';
+            }
+            
+            statusSummary.basicEnvironment = 'passed';
+            result.innerHTML = html;
+            result.className = 'status-card success';
+        }
+        
+        // Step 2: Chrome API Check
+        function checkChromeAPI() {
+            const result = document.getElementById('chrome-api-check');
+            let html = '<strong>Chrome Extension API Check:</strong><br>';
+            
+            if (typeof chrome === 'undefined') {
+                html += '❌ Chrome object not available<br>';
+                html += '<div class="code">This usually means:<br>1. Extension is not installed<br>2. Extension is disabled<br>3. Extension failed to load</div>';
+                statusSummary.chromeAPI = 'failed';
+                result.innerHTML = html;
+                result.className = 'status-card error';
+                return;
+            }
+            
+            html += '✅ Chrome object available<br>';
+            
+            const apis = ['runtime', 'tabs', 'storage'];
+            apis.forEach(api => {
+                if (chrome[api]) {
+                    html += `✅ chrome.${api} available<br>`;
+                } else {
+                    html += `❌ chrome.${api} not available<br>`;
+                }
+            });
+            
+            statusSummary.chromeAPI = 'passed';
+            result.innerHTML = html;
+            result.className = 'status-card success';
+        }
+        
+        // Step 3: Content Script Check
+        function checkContentScripts() {
+            const result = document.getElementById('content-script-check');
+            let html = '<strong>Content Script Check:</strong><br>';
+            
+            const contentScripts = [
+                { name: 'STELogger', obj: window.STELogger },
+                { name: 'STEKeyboardTracker', obj: window.STEKeyboardTracker },
+                { name: 'STESecurityEnforcer', obj: window.STESecurityEnforcer },
+                { name: 'STEPageMonitor', obj: window.STEPageMonitor }
+            ];
+            
+            let foundCount = 0;
+            contentScripts.forEach(script => {
+                if (script.obj) {
+                    html += `✅ ${script.name} loaded<br>`;
+                    foundCount++;
+                } else {
+                    html += `❌ ${script.name} not found<br>`;
+                }
+            });
+            
+            if (foundCount === contentScripts.length) {
+                html += '<br>🎉 All content scripts loaded successfully!';
+                statusSummary.contentScripts = 'passed';
+                result.className = 'status-card success';
+            } else if (foundCount > 0) {
+                html += `<br>⚠️ Only ${foundCount}/${contentScripts.length} content scripts loaded`;
+                statusSummary.contentScripts = 'partial';
+                result.className = 'status-card warning';
+            } else {
+                html += '<br>❌ No content scripts loaded';
+                html += '<div class="code">This usually means:<br>1. Extension is not installed or enabled<br>2. Content scripts failed to inject<br>3. JavaScript errors in content scripts</div>';
+                statusSummary.contentScripts = 'failed';
+                result.className = 'status-card error';
+            }
+            
+            result.innerHTML = html;
+            updateStatusSummary();
+        }
+        
+        // Step 4: Extension Communication Check
+        function checkExtensionCommunication() {
+            const result = document.getElementById('extension-comm-check');
+            result.innerHTML = '<strong>Testing extension communication...</strong>';
+            result.className = 'status-card info';
+            
+            if (typeof chrome === 'undefined' || !chrome.runtime) {
+                result.innerHTML = '<strong>Extension Communication Check:</strong><br>❌ Chrome runtime not available<br><div class="code">Cannot test communication without Chrome runtime</div>';
+                result.className = 'status-card error';
+                statusSummary.extensionComm = 'failed';
+                updateStatusSummary();
+                return;
+            }
+            
+            // Test direct chrome.runtime.sendMessage
+            chrome.runtime.sendMessage({ action: 'PING' }, (response) => {
+                let html = '<strong>Extension Communication Check:</strong><br>';
+                
+                if (chrome.runtime.lastError) {
+                    html += `❌ Communication failed: ${chrome.runtime.lastError.message}<br>`;
+                    html += '<div class="code">This usually means:<br>1. Extension service worker is not running<br>2. Extension has errors<br>3. Extension is not properly installed</div>';
+                    statusSummary.extensionComm = 'failed';
+                    result.className = 'status-card error';
+                } else if (response) {
+                    html += '✅ Extension responded successfully!<br>';
+                    html += `📋 Extension ID: ${response.extensionId || 'Unknown'}<br>`;
+                    html += `📋 Version: ${response.version || 'Unknown'}<br>`;
+                    html += `📋 Active: ${response.isActive ? 'Yes' : 'No'}<br>`;
+                    html += `📋 Initialized: ${response.isInitialized ? 'Yes' : 'No'}<br>`;
+                    statusSummary.extensionComm = 'passed';
+                    result.className = 'status-card success';
+                } else {
+                    html += '❌ Extension did not respond<br>';
+                    html += '<div class="code">Extension may be installed but not responding to messages</div>';
+                    statusSummary.extensionComm = 'failed';
+                    result.className = 'status-card error';
+                }
+                
+                result.innerHTML = html;
+                updateStatusSummary();
+            });
+        }
+        
+        function updateStatusSummary() {
+            const summary = document.getElementById('status-summary');
+            let html = '<strong>Overall Status:</strong><br>';
+            
+            const checks = [
+                { name: 'Basic Environment', status: statusSummary.basicEnvironment },
+                { name: 'Chrome API', status: statusSummary.chromeAPI },
+                { name: 'Content Scripts', status: statusSummary.contentScripts },
+                { name: 'Extension Communication', status: statusSummary.extensionComm }
+            ];
+            
+            let passedCount = 0;
+            checks.forEach(check => {
+                let icon = '❓';
+                if (check.status === 'passed') {
+                    icon = '✅';
+                    passedCount++;
+                } else if (check.status === 'failed') {
+                    icon = '❌';
+                } else if (check.status === 'partial') {
+                    icon = '⚠️';
+                }
+                html += `${icon} ${check.name}: ${check.status}<br>`;
+            });
+            
+            html += '<br>';
+            if (passedCount === checks.length) {
+                html += '🎉 <strong>Extension is working properly!</strong>';
+                summary.className = 'status-card success';
+            } else if (passedCount > 0) {
+                html += '⚠️ <strong>Extension has some issues that need attention</strong>';
+                summary.className = 'status-card warning';
+            } else {
+                html += '❌ <strong>Extension is not working - please follow the installation guide</strong>';
+                summary.className = 'status-card error';
+            }
+            
+            summary.innerHTML = html;
+        }
+        
+        // Run basic checks on page load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                checkBasicEnvironment();
+                checkChromeAPI();
+                updateStatusSummary();
+            }, 500);
+        });
+    </script>
+</body>
+</html>

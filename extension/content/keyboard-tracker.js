@@ -8,6 +8,12 @@ class KeyboardTracker {
     this.maxKeystrokes = 10000;
     this.suspiciousPatterns = [];
     this.blockedKeys = new Set();
+    
+    // Bind event handlers to maintain 'this' context
+    this.handleKeyDown = this.handleKeyDown.bind(this);
+    this.handleKeyUp = this.handleKeyUp.bind(this);
+    this.handleKeyPress = this.handleKeyPress.bind(this);
+    
     this.init();
   }
 
@@ -141,9 +147,9 @@ class KeyboardTracker {
     this.isActive = true;
     
     // Add event listeners
-    document.addEventListener('keydown', this.handleKeyDown.bind(this), true);
-    document.addEventListener('keyup', this.handleKeyUp.bind(this), true);
-    document.addEventListener('keypress', this.handleKeyPress.bind(this), true);
+    document.addEventListener('keydown', this.handleKeyDown, true);
+    document.addEventListener('keyup', this.handleKeyUp, true);
+    document.addEventListener('keypress', this.handleKeyPress, true);
     
     window.STELogger?.info('Keyboard tracking started');
   }
@@ -154,9 +160,9 @@ class KeyboardTracker {
     this.isActive = false;
     
     // Remove event listeners
-    document.removeEventListener('keydown', this.handleKeyDown.bind(this), true);
-    document.removeEventListener('keyup', this.handleKeyUp.bind(this), true);
-    document.removeEventListener('keypress', this.handleKeyPress.bind(this), true);
+    document.removeEventListener('keydown', this.handleKeyDown, true);
+    document.removeEventListener('keyup', this.handleKeyUp, true);
+    document.removeEventListener('keypress', this.handleKeyPress, true);
     
     window.STELogger?.info('Keyboard tracking stopped');
   }
