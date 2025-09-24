@@ -161,20 +161,46 @@ class SystemMonitor {
 
   async getProcessInfo() {
     try {
-      // Chrome extension API has limited access to system processes
-      // We can only get Chrome-related processes
-      const processes = await chrome.processes.getProcessInfo([], true);
+      // Note: chrome.processes API requires Chrome Dev channel
+      // For stable channel, we'll use alternative methods to detect running applications
       
-      this.systemData.runningProcesses = Object.values(processes).map(process => ({
-        id: process.id,
-        type: process.type,
-        cpu: process.cpu,
-        memory: process.memory,
-        title: process.title || 'Unknown'
-      }));
+      // Check if processes API is available (Dev channel only)
+      if (chrome.processes && chrome.processes.getProcessInfo) {
+        const processes = await chrome.processes.getProcessInfo([], true);
+        this.systemData.runningProcesses = Object.values(processes).map(process => ({
+          id: process.id,
+          type: process.type,
+          cpu: process.cpu,
+          memory: process.memory,
+          title: process.title || 'Unknown'
+        }));
+      } else {
+        // Fallback for stable channel - use tabs and extensions info
+        const tabs = await chrome.tabs.query({});
+        const extensions = await chrome.management.getAll();
+        
+        this.systemData.runningProcesses = [
+          ...tabs.map(tab => ({
+            id: tab.id,
+            type: 'tab',
+            cpu: 0, // Not available in stable channel
+            memory: 0, // Not available in stable channel
+            title: tab.title || tab.url || 'Unknown Tab'
+          })),
+          ...extensions.filter(ext => ext.enabled).map(ext => ({
+            id: ext.id,
+            type: 'extension',
+            cpu: 0,
+            memory: 0,
+            title: ext.name
+          }))
+        ];
+      }
       
     } catch (error) {
       console.error('Failed to get process info:', error);
+      // Set empty array as fallback
+      this.systemData.runningProcesses = [];
     }
   }
 

@@ -106,6 +106,7 @@
 2. **Permission errors**: Ensure all required permissions are declared
 3. **Content script errors**: Check if scripts are properly injected
 4. **API errors**: Verify Chrome API usage and permissions
+5. **"requires dev channel" error**: This extension is now compatible with Chrome stable channel. If you see this error, reload the extension after the latest updates.
 
 ## Expected Behavior
 

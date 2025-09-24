@@ -25,15 +25,18 @@
 - `extension/background/system-monitor.js` (getBatteryInfo method)
 - `extension/content/page-monitor.js` (added getBatteryInfo method and message handler)
 
-### 3. Missing Processes Permission
-**Problem**: `chrome.processes.getProcessInfo()` was being used without the required "processes" permission.
+### 3. Chrome Processes API Compatibility
+**Problem**: `chrome.processes.getProcessInfo()` requires Chrome Dev channel, but most users are on stable channel.
 
 **Solution**:
-- Added "processes" permission to `manifest.json`
-- This allows the extension to monitor Chrome processes for security purposes
+- Removed "processes" permission from `manifest.json` (not available in stable channel)
+- Updated `getProcessInfo()` method to detect API availability and use fallback methods
+- For stable channel: uses tabs and extensions APIs to provide similar monitoring
+- For dev channel: uses full processes API when available
 
 **Files Modified**:
-- `extension/manifest.json` (added "processes" permission)
+- `extension/manifest.json` (removed "processes" permission)
+- `extension/background/system-monitor.js` (added compatibility layer)
 
 ## Testing Instructions
 
