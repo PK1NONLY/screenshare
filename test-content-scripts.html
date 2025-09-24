@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Content Scripts Test</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status-card { 
+            margin: 15px 0; 
+            padding: 15px; 
+            border-radius: 5px; 
+            border-left: 4px solid #ccc;
+        }
+        .success { 
+            background: #d4edda; 
+            color: #155724; 
+            border-left-color: #28a745;
+        }
+        .error { 
+            background: #f8d7da; 
+            color: #721c24; 
+            border-left-color: #dc3545;
+        }
+        .warning { 
+            background: #fff3cd; 
+            color: #856404; 
+            border-left-color: #ffc107;
+        }
+        .info { 
+            background: #d1ecf1; 
+            color: #0c5460; 
+            border-left-color: #17a2b8;
+        }
+        button { 
+            margin: 5px; 
+            padding: 10px 15px; 
+            border: none;
+            border-radius: 4px;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover { background: #0056b3; }
+        .code { 
+            background: #f8f9fa; 
+            padding: 10px; 
+            border-radius: 4px; 
+            font-family: monospace;
+            margin: 10px 0;
+            white-space: pre-wrap;
+        }
+        #log {
+            background: #000;
+            color: #0f0;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 15px 0;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #495057;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Content Scripts Test</h1>
+        <p>This page tests if content scripts are loading and functioning properly.</p>
+        
+        <div class="test-section">
+            <h3>Content Script Detection</h3>
+            <div id="content-script-results" class="status-card info">
+                <strong>Testing content script availability...</strong>
+            </div>
+            <button onclick="testContentScripts()">Test Content Scripts</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>Security Enforcement Test</h3>
+            <div id="security-results" class="status-card info">
+                <strong>Click buttons below to test security enforcement</strong>
+            </div>
+            <button onclick="testCopyPaste()">Test Copy/Paste Blocking</button>
+            <button onclick="testKeyboardShortcuts()">Test Keyboard Shortcuts</button>
+            <button onclick="testContextMenu()">Test Context Menu</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>Keyboard Tracking Test</h3>
+            <div id="keyboard-results" class="status-card info">
+                <strong>Type in the input below to test keystroke tracking</strong>
+            </div>
+            <input type="text" id="test-input" placeholder="Type here to test keystroke tracking..." style="width: 100%; padding: 10px; margin: 10px 0;">
+            <button onclick="clearInput()">Clear Input</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>Page Monitoring Test</h3>
+            <div id="monitoring-results" class="status-card info">
+                <strong>Page monitoring status will appear here</strong>
+            </div>
+            <button onclick="testPageMonitoring()">Test Page Monitoring</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>Console Log</h3>
+            <div id="log"></div>
+            <button onclick="clearLog()">Clear Log</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>Manual Tests</h3>
+            <div class="status-card warning">
+                <strong>Try these manual tests:</strong><br>
+                1. Right-click anywhere → Context menu should be blocked<br>
+                2. Press Ctrl+C or Ctrl+V → Should be blocked<br>
+                3. Press F12 or Ctrl+Shift+I → Should be blocked<br>
+                4. Press Ctrl+U → Should be blocked<br>
+                5. Try to select text and copy → Should be blocked<br>
+                6. Try keyboard shortcuts → Should be logged/blocked
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${timestamp}] ${message}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(message);
+        }
+        
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+        
+        function updateStatus(elementId, message, className) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = message;
+            element.className = `status-card ${className}`;
+        }
+        
+        function testContentScripts() {
+            log('Testing content script availability...');
+            
+            const contentScripts = [
+                { name: 'STELogger', obj: window.STELogger },
+                { name: 'STEKeyboardTracker', obj: window.STEKeyboardTracker },
+                { name: 'STESecurityEnforcer', obj: window.STESecurityEnforcer },
+                { name: 'STEPageMonitor', obj: window.STEPageMonitor }
+            ];
+            
+            let loadedCount = 0;
+            let results = '<strong>Content Script Test Results:</strong><br>';
+            
+            contentScripts.forEach(script => {
+                if (script.obj) {
+                    results += `✅ ${script.name}: Available<br>`;
+                    log(`PASS: ${script.name} is available`);
+                    loadedCount++;
+                } else {
+                    results += `❌ ${script.name}: Not found<br>`;
+                    log(`FAIL: ${script.name} is not available`);
+                }
+            });
+            
+            const percentage = Math.round((loadedCount / contentScripts.length) * 100);
+            results += `<br><strong>Summary: ${loadedCount}/${contentScripts.length} (${percentage}%) content scripts loaded</strong>`;
+            
+            if (loadedCount === contentScripts.length) {
+                updateStatus('content-script-results', results, 'success');
+            } else if (loadedCount > 0) {
+                updateStatus('content-script-results', results, 'warning');
+            } else {
+                updateStatus('content-script-results', results, 'error');
+            }
+        }
+        
+        function testCopyPaste() {
+            log('Testing copy/paste blocking...');
+            
+            // Test copy
+            try {
+                document.execCommand('copy');
+                log('FAIL: Copy command executed (should be blocked)');
+            } catch (error) {
+                log('PASS: Copy command blocked');
+            }
+            
+            // Test paste
+            try {
+                document.execCommand('paste');
+                log('FAIL: Paste command executed (should be blocked)');
+            } catch (error) {
+                log('PASS: Paste command blocked');
+            }
+            
+            // Test clipboard API
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText('test').then(() => {
+                    log('FAIL: Clipboard write succeeded (should be blocked)');
+                }).catch(() => {
+                    log('PASS: Clipboard write blocked');
+                });
+                
+                navigator.clipboard.readText().then(() => {
+                    log('FAIL: Clipboard read succeeded (should be blocked)');
+                }).catch(() => {
+                    log('PASS: Clipboard read blocked');
+                });
+            }
+            
+            updateStatus('security-results', 'Copy/paste test completed - check console log for results', 'info');
+        }
+        
+        function testKeyboardShortcuts() {
+            log('Testing keyboard shortcut blocking...');
+            
+            const shortcuts = [
+                { key: 'F12', description: 'Developer Tools' },
+                { key: 'Ctrl+Shift+I', description: 'Developer Tools' },
+                { key: 'Ctrl+U', description: 'View Source' },
+                { key: 'Ctrl+Shift+J', description: 'Console' },
+                { key: 'Ctrl+C', description: 'Copy' },
+                { key: 'Ctrl+V', description: 'Paste' }
+            ];
+            
+            let message = '<strong>Keyboard Shortcut Test:</strong><br>';
+            message += 'Try pressing these shortcuts manually:<br>';
+            shortcuts.forEach(shortcut => {
+                message += `• ${shortcut.key} (${shortcut.description})<br>`;
+            });
+            message += '<br>Check console log for blocking results.';
+            
+            updateStatus('security-results', message, 'info');
+        }
+        
+        function testContextMenu() {
+            log('Testing context menu blocking...');
+            
+            // Simulate right-click
+            const event = new MouseEvent('contextmenu', {
+                bubbles: true,
+                cancelable: true,
+                button: 2
+            });
+            
+            const prevented = !document.dispatchEvent(event);
+            
+            if (prevented) {
+                log('PASS: Context menu blocked');
+                updateStatus('security-results', '✅ Context menu is blocked', 'success');
+            } else {
+                log('FAIL: Context menu not blocked');
+                updateStatus('security-results', '❌ Context menu is not blocked', 'error');
+            }
+        }
+        
+        function testPageMonitoring() {
+            log('Testing page monitoring...');
+            
+            if (window.STEPageMonitor) {
+                log('PASS: Page monitor is available');
+                
+                // Test if monitoring is active
+                if (typeof window.STEPageMonitor.isActive !== 'undefined') {
+                    log(`Page monitoring active: ${window.STEPageMonitor.isActive}`);
+                }
+                
+                updateStatus('monitoring-results', '✅ Page monitoring is available and active', 'success');
+            } else {
+                log('FAIL: Page monitor not available');
+                updateStatus('monitoring-results', '❌ Page monitoring not available', 'error');
+            }
+        }
+        
+        function clearInput() {
+            document.getElementById('test-input').value = '';
+        }
+        
+        // Set up keyboard event listeners for testing
+        document.addEventListener('keydown', function(event) {
+            const key = event.key;
+            const ctrl = event.ctrlKey;
+            const shift = event.shiftKey;
+            const alt = event.altKey;
+            
+            let keyCombo = '';
+            if (ctrl) keyCombo += 'Ctrl+';
+            if (shift) keyCombo += 'Shift+';
+            if (alt) keyCombo += 'Alt+';
+            keyCombo += key;
+            
+            log(`Key pressed: ${keyCombo} (prevented: ${event.defaultPrevented})`);
+            
+            // Update keyboard results
+            const keyboardResults = document.getElementById('keyboard-results');
+            keyboardResults.innerHTML = `<strong>Last key pressed:</strong> ${keyCombo}<br><strong>Blocked:</strong> ${event.defaultPrevented ? 'Yes' : 'No'}`;
+            keyboardResults.className = `status-card ${event.defaultPrevented ? 'success' : 'warning'}`;
+        });
+        
+        // Set up copy/paste event listeners
+        document.addEventListener('copy', function(event) {
+            log(`Copy event triggered (prevented: ${event.defaultPrevented})`);
+        });
+        
+        document.addEventListener('paste', function(event) {
+            log(`Paste event triggered (prevented: ${event.defaultPrevented})`);
+        });
+        
+        document.addEventListener('contextmenu', function(event) {
+            log(`Context menu event triggered (prevented: ${event.defaultPrevented})`);
+        });
+        
+        // Run initial tests on page load
+        window.addEventListener('load', () => {
+            log('Page loaded, running initial tests...');
+            setTimeout(() => {
+                testContentScripts();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
