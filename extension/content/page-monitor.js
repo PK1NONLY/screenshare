@@ -24,8 +24,11 @@ class PageMonitor {
     // Get configuration from background
     await this.loadConfiguration();
     
-    // Set up message listener
+    // Set up message listener for extension messages
     chrome.runtime.onMessage.addListener(this.handleMessage.bind(this));
+    
+    // Set up message listener for Integration API
+    window.addEventListener('message', this.handleIntegrationAPIMessage.bind(this));
     
     // Start monitoring if active
     if (this.isActive) {
@@ -77,6 +80,36 @@ class PageMonitor {
     }
     
     return true;
+  }
+
+  async handleIntegrationAPIMessage(event) {
+    // Only handle messages from the same window
+    if (event.source !== window) return;
+    
+    // Check if it's a message from the Integration API
+    if (event.data && event.data.source === 'secure-testing-environment-api') {
+      const { message } = event.data;
+      
+      try {
+        // Forward the message to the background script
+        const response = await chrome.runtime.sendMessage(message);
+        
+        // Send response back to the Integration API
+        window.postMessage({
+          source: 'secure-testing-environment-response',
+          messageId: message.messageId,
+          response: response
+        }, '*');
+        
+      } catch (error) {
+        // Send error response back to the Integration API
+        window.postMessage({
+          source: 'secure-testing-environment-response',
+          messageId: message.messageId,
+          response: { error: error.message, success: false }
+        }, '*');
+      }
+    }
   }
 
   startMonitoring() {
