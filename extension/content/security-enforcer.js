@@ -24,7 +24,10 @@ class SecurityEnforcer {
       await this.loadConfiguration();
       
       // Set up message listener
-      chrome.runtime.onMessage.addListener(this.handleMessage.bind(this));
+      chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+        this.handleMessage(request, sender, sendResponse);
+        return true; // Keep message channel open
+      });
       
       // Start enforcement if active
       if (this.isActive) {
@@ -53,6 +56,10 @@ class SecurityEnforcer {
 
   handleMessage(request, sender, sendResponse) {
     switch (request.action) {
+      case 'PING':
+        sendResponse({ success: true, message: 'SecurityEnforcer PONG', isActive: this.isActive });
+        break;
+        
       case 'ACTIVATE_SECURITY':
         this.activate(request.config);
         sendResponse({ success: true });

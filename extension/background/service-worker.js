@@ -178,8 +178,14 @@ class SecureTestingService {
     chrome.webNavigation.onBeforeNavigate.addListener(this.handleNavigation.bind(this));
 
     // Message handling
-    chrome.runtime.onMessage.addListener(this.handleMessage.bind(this));
-    chrome.runtime.onMessageExternal.addListener(this.handleExternalMessage.bind(this));
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+      this.handleMessage(request, sender, sendResponse);
+      return true; // Keep message channel open for async responses
+    });
+    chrome.runtime.onMessageExternal.addListener((request, sender, sendResponse) => {
+      this.handleExternalMessage(request, sender, sendResponse);
+      return true; // Keep message channel open for async responses
+    });
 
     // Keyboard shortcuts
     chrome.commands.onCommand.addListener(this.handleCommand.bind(this));
@@ -208,7 +214,6 @@ class SecureTestingService {
         // Show notification
         chrome.notifications.create({
           type: 'basic',
-          iconUrl: 'icons/icon48.png',
           title: 'Unauthorized Action Blocked',
           message: 'New tab creation is not allowed during the test.'
         });
@@ -405,8 +410,18 @@ class SecureTestingService {
         break;
         
       case 'GET_SYSTEM_DATA':
-        const systemData = await this.getSystemData();
-        sendResponse({ success: true, systemData });
+        try {
+          const systemData = await this.getSystemData();
+          sendResponse({ success: true, systemData });
+        } catch (error) {
+          console.error('[STE] Failed to get system data:', error);
+          sendResponse({ success: false, error: error.message });
+        }
+        break;
+        
+      case 'PING':
+        console.log('[STE] Received PING from:', sender.tab ? `tab ${sender.tab.id}` : 'popup');
+        sendResponse({ success: true, message: 'PONG', timestamp: Date.now() });
         break;
         
       case 'DEVELOPER_TOOLS_DETECTED':

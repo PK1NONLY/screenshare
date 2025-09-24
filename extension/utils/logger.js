@@ -92,8 +92,11 @@ class Logger {
   }
 }
 
-// Create global logger instance
-window.STELogger = new Logger();
+// Initialize logger instance
+const logger = new Logger();
+
+// Export for external access
+window.STELogger = logger;
 
 // Export for modules
 if (typeof module !== 'undefined' && module.exports) {
