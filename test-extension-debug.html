@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extension Debug Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .result { margin: 10px 0; padding: 10px; background: #f5f5f5; border-radius: 3px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        button { margin: 5px; padding: 10px 15px; }
+    </style>
+</head>
+<body>
+    <h1>Extension Debug Test</h1>
+    
+    <div class="test-section">
+        <h3>1. Content Script Injection Test</h3>
+        <button onclick="testContentScripts()">Test Content Scripts</button>
+        <div id="content-script-result" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>2. Extension Communication Test</h3>
+        <button onclick="testExtensionCommunication()">Test Extension Communication</button>
+        <div id="extension-comm-result" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>3. Chrome Runtime Test</h3>
+        <button onclick="testChromeRuntime()">Test Chrome Runtime</button>
+        <div id="chrome-runtime-result" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>4. Integration API Test</h3>
+        <button onclick="testIntegrationAPI()">Test Integration API</button>
+        <div id="integration-api-result" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>5. Keystroke Test</h3>
+        <input type="text" placeholder="Type here to test keystroke monitoring" id="keystroke-input">
+        <div id="keystroke-result" class="result">Type in the input above to test keystroke monitoring...</div>
+    </div>
+    
+    <div class="test-section">
+        <h3>6. Copy/Paste Test</h3>
+        <textarea placeholder="Try to copy/paste text here" id="copy-paste-test"></textarea>
+        <div id="copy-paste-result" class="result">Try copying and pasting text in the textarea above...</div>
+    </div>
+
+    <script>
+        // Test 1: Content Script Injection
+        function testContentScripts() {
+            const result = document.getElementById('content-script-result');
+            result.innerHTML = 'Testing content script injection...';
+            
+            const tests = [
+                { name: 'STELogger', obj: window.STELogger },
+                { name: 'STEKeyboardTracker', obj: window.STEKeyboardTracker },
+                { name: 'STESecurityEnforcer', obj: window.STESecurityEnforcer },
+                { name: 'STEPageMonitor', obj: window.STEPageMonitor }
+            ];
+            
+            let html = '<h4>Content Script Objects:</h4>';
+            tests.forEach(test => {
+                const status = test.obj ? 'Found' : 'Not Found';
+                const className = test.obj ? 'success' : 'error';
+                html += `<div class="${className}">${test.name}: ${status}</div>`;
+            });
+            
+            result.innerHTML = html;
+        }
+        
+        // Test 2: Extension Communication
+        function testExtensionCommunication() {
+            const result = document.getElementById('extension-comm-result');
+            result.innerHTML = 'Testing extension communication...';
+            
+            // Test chrome.runtime availability
+            if (typeof chrome === 'undefined' || !chrome.runtime) {
+                result.innerHTML = '<div class="error">Chrome runtime not available</div>';
+                return;
+            }
+            
+            // Try to send a message to the extension
+            chrome.runtime.sendMessage({ action: 'PING' }, (response) => {
+                if (chrome.runtime.lastError) {
+                    result.innerHTML = `<div class="error">Extension communication failed: ${chrome.runtime.lastError.message}</div>`;
+                } else if (response) {
+                    result.innerHTML = `<div class="success">Extension responded: ${JSON.stringify(response)}</div>`;
+                } else {
+                    result.innerHTML = '<div class="error">Extension did not respond</div>';
+                }
+            });
+        }
+        
+        // Test 3: Chrome Runtime
+        function testChromeRuntime() {
+            const result = document.getElementById('chrome-runtime-result');
+            
+            let html = '<h4>Chrome Runtime Status:</h4>';
+            
+            if (typeof chrome === 'undefined') {
+                html += '<div class="error">Chrome object not available</div>';
+            } else {
+                html += '<div class="success">Chrome object available</div>';
+                
+                const apis = ['runtime', 'tabs', 'storage', 'system'];
+                apis.forEach(api => {
+                    const available = chrome[api] ? 'Available' : 'Not Available';
+                    const className = chrome[api] ? 'success' : 'error';
+                    html += `<div class="${className}">chrome.${api}: ${available}</div>`;
+                });
+            }
+            
+            result.innerHTML = html;
+        }
+        
+        // Test 4: Integration API
+        function testIntegrationAPI() {
+            const result = document.getElementById('integration-api-result');
+            result.innerHTML = 'Testing Integration API...';
+            
+            // Load the integration API
+            const script = document.createElement('script');
+            script.src = '/extension/api/integration-api.js';
+            script.onload = () => {
+                setTimeout(() => {
+                    if (window.SecureTestingEnvironment) {
+                        const api = window.SecureTestingEnvironment;
+                        const isAvailable = api.isAvailable();
+                        
+                        let html = `<div class="${isAvailable ? 'success' : 'error'}">API Available: ${isAvailable}</div>`;
+                        
+                        // Test ping
+                        api.getExtensionInfo().then(info => {
+                            if (info) {
+                                html += `<div class="success">Extension Info: ${JSON.stringify(info)}</div>`;
+                            } else {
+                                html += '<div class="error">No extension info received</div>';
+                            }
+                            result.innerHTML = html;
+                        }).catch(error => {
+                            html += `<div class="error">API Error: ${error.message}</div>`;
+                            result.innerHTML = html;
+                        });
+                    } else {
+                        result.innerHTML = '<div class="error">Integration API not loaded</div>';
+                    }
+                }, 1000);
+            };
+            script.onerror = () => {
+                result.innerHTML = '<div class="error">Failed to load Integration API</div>';
+            };
+            document.head.appendChild(script);
+        }
+        
+        // Test 5: Keystroke Monitoring
+        document.getElementById('keystroke-input').addEventListener('keydown', (e) => {
+            const result = document.getElementById('keystroke-result');
+            result.innerHTML = `Last keystroke: ${e.key} (Code: ${e.code}) at ${new Date().toLocaleTimeString()}`;
+        });
+        
+        // Test 6: Copy/Paste Monitoring
+        const copyPasteArea = document.getElementById('copy-paste-test');
+        
+        copyPasteArea.addEventListener('copy', (e) => {
+            const result = document.getElementById('copy-paste-result');
+            result.innerHTML = `Copy event detected at ${new Date().toLocaleTimeString()}`;
+        });
+        
+        copyPasteArea.addEventListener('paste', (e) => {
+            const result = document.getElementById('copy-paste-result');
+            result.innerHTML = `Paste event detected at ${new Date().toLocaleTimeString()}`;
+        });
+        
+        copyPasteArea.addEventListener('cut', (e) => {
+            const result = document.getElementById('copy-paste-result');
+            result.innerHTML = `Cut event detected at ${new Date().toLocaleTimeString()}`;
+        });
+        
+        // Auto-run basic tests on load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                testContentScripts();
+                testChromeRuntime();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

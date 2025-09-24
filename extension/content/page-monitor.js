@@ -19,20 +19,37 @@ class PageMonitor {
   }
 
   async init() {
-    window.STELogger?.info('Page Monitor initialized');
-    
-    // Get configuration from background
-    await this.loadConfiguration();
-    
-    // Set up message listener for extension messages
-    chrome.runtime.onMessage.addListener(this.handleMessage.bind(this));
-    
-    // Set up message listener for Integration API
-    window.addEventListener('message', this.handleIntegrationAPIMessage.bind(this));
-    
-    // Start monitoring if active
-    if (this.isActive) {
-      this.startMonitoring();
+    try {
+      console.log('[STE] Page Monitor initializing...');
+      
+      // Initialize logger first
+      if (!window.STELogger) {
+        console.log('[STE] Logger not available, Page Monitor will use console');
+      } else {
+        window.STELogger.info('Page Monitor initialized');
+      }
+      
+      // Get configuration from background
+      await this.loadConfiguration();
+      
+      // Set up message listener for extension messages
+      chrome.runtime.onMessage.addListener(this.handleMessage.bind(this));
+      
+      // Set up message listener for Integration API
+      window.addEventListener('message', this.handleIntegrationAPIMessage.bind(this));
+      
+      // Start monitoring if active
+      if (this.isActive) {
+        this.startMonitoring();
+      }
+      
+      // Make this available globally for debugging
+      window.STEPageMonitor = this;
+      
+      console.log('[STE] Page Monitor initialized successfully');
+      
+    } catch (error) {
+      console.error('[STE] Page Monitor initialization failed:', error);
     }
   }
 
@@ -48,6 +65,17 @@ class PageMonitor {
 
   handleMessage(request, sender, sendResponse) {
     switch (request.action) {
+      case 'EXTENSION_READY':
+        console.log('[STE] Extension ready notification received');
+        // Reload configuration and restart monitoring if needed
+        this.loadConfiguration().then(() => {
+          if (this.isActive) {
+            this.startMonitoring();
+          }
+        });
+        sendResponse({ success: true });
+        break;
+        
       case 'START_PAGE_MONITORING':
         this.startMonitoring();
         sendResponse({ success: true });

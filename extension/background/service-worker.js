@@ -9,24 +9,57 @@ class SecureTestingService {
     this.monitoringInterval = null;
     this.unauthorizedActions = [];
     this.allowedTabs = new Set();
-    this.init();
+    this.isInitialized = false;
+    this.init().catch(error => {
+      console.error('Failed to initialize Secure Testing Service:', error);
+    });
   }
 
   async init() {
-    console.log('Secure Testing Environment: Service Worker initialized');
-    
-    // Initialize system monitor reference
-    this.systemMonitor = self.systemMonitor;
-    
-    // Load configuration from storage
-    await this.loadConfiguration();
-    
-    // Set up event listeners
-    this.setupEventListeners();
-    
-    // Start system monitoring if active
-    if (this.isActive) {
-      this.startMonitoring();
+    try {
+      console.log('Secure Testing Environment: Service Worker initializing...');
+      
+      // Initialize system monitor reference
+      this.systemMonitor = self.systemMonitor;
+      
+      // Load configuration from storage
+      await this.loadConfiguration();
+      
+      // Set up event listeners
+      this.setupEventListeners();
+      
+      // Start system monitoring if active
+      if (this.isActive) {
+        this.startMonitoring();
+      }
+      
+      this.isInitialized = true;
+      console.log('Secure Testing Environment: Service Worker initialized successfully');
+      
+      // Notify all tabs that the extension is ready
+      this.notifyTabsExtensionReady();
+      
+    } catch (error) {
+      console.error('Secure Testing Environment: Initialization failed:', error);
+      this.isInitialized = false;
+    }
+  }
+
+  async notifyTabsExtensionReady() {
+    try {
+      const tabs = await chrome.tabs.query({});
+      for (const tab of tabs) {
+        try {
+          await chrome.tabs.sendMessage(tab.id, {
+            action: 'EXTENSION_READY',
+            extensionId: chrome.runtime.id
+          });
+        } catch (error) {
+          // Tab might not have content script, ignore
+        }
+      }
+    } catch (error) {
+      console.error('Failed to notify tabs:', error);
     }
   }
 
@@ -319,7 +352,9 @@ class SecureTestingService {
           success: true, 
           extensionId: chrome.runtime.id,
           version: chrome.runtime.getManifest().version,
-          isActive: this.isActive
+          isActive: this.isActive,
+          isInitialized: this.isInitialized,
+          timestamp: Date.now()
         });
         break;
         

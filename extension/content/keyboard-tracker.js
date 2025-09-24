@@ -12,17 +12,33 @@ class KeyboardTracker {
   }
 
   async init() {
-    window.STELogger?.info('Keyboard Tracker initialized');
-    
-    // Get configuration from background
-    await this.loadConfiguration();
-    
-    // Set up message listener
-    chrome.runtime.onMessage.addListener(this.handleMessage.bind(this));
-    
-    // Start tracking if active
-    if (this.isActive) {
-      this.startTracking();
+    try {
+      console.log('[STE] Keyboard Tracker initializing...');
+      
+      if (!window.STELogger) {
+        console.log('[STE] Logger not available, Keyboard Tracker will use console');
+      } else {
+        window.STELogger.info('Keyboard Tracker initialized');
+      }
+      
+      // Get configuration from background
+      await this.loadConfiguration();
+      
+      // Set up message listener
+      chrome.runtime.onMessage.addListener(this.handleMessage.bind(this));
+      
+      // Start tracking if active
+      if (this.isActive) {
+        this.startTracking();
+      }
+      
+      // Make this available globally for debugging
+      window.STEKeyboardTracker = this;
+      
+      console.log('[STE] Keyboard Tracker initialized successfully');
+      
+    } catch (error) {
+      console.error('[STE] Keyboard Tracker initialization failed:', error);
     }
   }
 

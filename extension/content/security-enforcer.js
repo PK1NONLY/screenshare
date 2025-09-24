@@ -11,17 +11,33 @@ class SecurityEnforcer {
   }
 
   async init() {
-    window.STELogger?.info('Security Enforcer initialized');
-    
-    // Get configuration from background
-    await this.loadConfiguration();
-    
-    // Set up message listener
-    chrome.runtime.onMessage.addListener(this.handleMessage.bind(this));
-    
-    // Start enforcement if active
-    if (this.isActive) {
-      this.startEnforcement();
+    try {
+      console.log('[STE] Security Enforcer initializing...');
+      
+      if (!window.STELogger) {
+        console.log('[STE] Logger not available, Security Enforcer will use console');
+      } else {
+        window.STELogger.info('Security Enforcer initialized');
+      }
+      
+      // Get configuration from background
+      await this.loadConfiguration();
+      
+      // Set up message listener
+      chrome.runtime.onMessage.addListener(this.handleMessage.bind(this));
+      
+      // Start enforcement if active
+      if (this.isActive) {
+        this.startEnforcement();
+      }
+      
+      // Make this available globally for debugging
+      window.STESecurityEnforcer = this;
+      
+      console.log('[STE] Security Enforcer initialized successfully');
+      
+    } catch (error) {
+      console.error('[STE] Security Enforcer initialization failed:', error);
     }
   }
 

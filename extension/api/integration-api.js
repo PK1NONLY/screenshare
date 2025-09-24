@@ -31,39 +31,61 @@
 
     async connectToExtension() {
       try {
-        // Try to ping the extension
-        const response = await this.sendMessage({ action: 'PING' });
+        console.log('[STE API] Attempting to connect to extension...');
+        
+        // Set up message listener first
+        this.setupMessageListener();
+        
+        // Try to ping the extension with a timeout
+        const response = await this.sendMessageWithTimeout({ action: 'PING' }, 5000);
         
         if (response && response.success) {
           this.isConnected = true;
           this.extensionId = response.extensionId;
           
+          console.log('[STE API] Successfully connected to extension:', response.extensionId);
+          
           // Process queued messages
           this.processMessageQueue();
-          
-          // Set up message listener for extension events
-          this.setupMessageListener();
           
           return true;
         } else {
           throw new Error('Extension not found or not responding');
         }
       } catch (error) {
-        // Try to establish connection anyway
-        this.isConnected = true;
-        this.setupMessageListener();
-        
-        // Test with a simple message
-        try {
-          const testResponse = await this.sendMessage({ action: 'PING' });
-          if (testResponse) {
-            return true;
-          }
-        } catch (testError) {
-          this.isConnected = false;
-          throw new Error('Extension not available');
-        }
+        console.error('[STE API] Failed to connect to extension:', error.message);
+        this.isConnected = false;
+        throw error;
       }
+    }
+
+    async sendMessageWithTimeout(message, timeout = 10000) {
+      return new Promise((resolve, reject) => {
+        const messageId = Date.now() + Math.random();
+        const messageWithId = { ...message, messageId };
+        
+        const timeoutId = setTimeout(() => {
+          reject(new Error('Message timeout'));
+        }, timeout);
+        
+        const responseHandler = (event) => {
+          if (event.data && 
+              event.data.source === 'secure-testing-environment-response' && 
+              event.data.messageId === messageId) {
+            clearTimeout(timeoutId);
+            window.removeEventListener('message', responseHandler);
+            resolve(event.data.response);
+          }
+        };
+        
+        window.addEventListener('message', responseHandler);
+        
+        // Send message
+        window.postMessage({
+          source: 'secure-testing-environment-api',
+          message: messageWithId
+        }, '*');
+      });
     }
 
     setupMessageListener() {
@@ -101,35 +123,9 @@
       }
 
       try {
-        // Send message to extension content script
-        return new Promise((resolve, reject) => {
-          const messageId = Date.now() + Math.random();
-          const messageWithId = { ...message, messageId };
-          
-          const timeout = setTimeout(() => {
-            reject(new Error('Message timeout'));
-          }, 10000);
-          
-          const responseHandler = (event) => {
-            if (event.data && 
-                event.data.source === 'secure-testing-environment-response' && 
-                event.data.messageId === messageId) {
-              clearTimeout(timeout);
-              window.removeEventListener('message', responseHandler);
-              resolve(event.data.response);
-            }
-          };
-          
-          window.addEventListener('message', responseHandler);
-          
-          // Send message
-          window.postMessage({
-            source: 'secure-testing-environment-api',
-            message: messageWithId
-          }, '*');
-        });
+        return await this.sendMessageWithTimeout(message, 10000);
       } catch (error) {
-        console.error('Failed to send message:', error);
+        console.error('[STE API] Failed to send message:', error);
         return null;
       }
     }
