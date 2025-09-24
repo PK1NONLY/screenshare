@@ -128,7 +128,12 @@ class SecureTestingService {
 
   getDefaultConfig() {
     return {
-      allowedUrls: [],
+      allowedUrls: [
+        'chrome://*',
+        'chrome-extension://*',
+        'https://work-1-coiqhoypmqstyttp.prod-runtime.all-hands.dev/*',
+        'https://work-2-coiqhoypmqstyttp.prod-runtime.all-hands.dev/*'
+      ],
       allowedExtensions: [],
       restrictions: {
         blockCopyPaste: true,
@@ -352,8 +357,13 @@ class SecureTestingService {
   async handleMessage(request, sender, sendResponse) {
     switch (request.action) {
       case 'ACTIVATE_MONITORING':
-        await this.activateMonitoring(request.config);
-        sendResponse({ success: true });
+        try {
+          await this.activateMonitoring(request.config);
+          sendResponse({ success: true });
+        } catch (error) {
+          console.error('[STE] Failed to activate monitoring:', error);
+          sendResponse({ success: false, error: error.message });
+        }
         break;
         
       case 'DEACTIVATE_MONITORING':
@@ -392,6 +402,11 @@ class SecureTestingService {
       case 'GET_SYSTEM_INFO':
         const systemInfo = await this.systemMonitor.getSystemInfo();
         sendResponse({ success: true, systemInfo });
+        break;
+        
+      case 'GET_SYSTEM_DATA':
+        const systemData = await this.getSystemData();
+        sendResponse({ success: true, systemData });
         break;
         
       case 'DEVELOPER_TOOLS_DETECTED':
@@ -562,24 +577,44 @@ class SecureTestingService {
   }
 
   async activateMonitoring(config) {
-    this.config = { ...this.config, ...config };
-    this.isActive = true;
-    
-    await chrome.storage.local.set({
-      config: this.config,
-      isActive: this.isActive
-    });
-    
-    this.startMonitoring();
-    
-    // Disable unauthorized extensions
-    const extensions = await chrome.management.getAll();
-    for (const ext of extensions) {
-      if (ext.enabled && 
-          ext.id !== chrome.runtime.id && 
-          !this.config.allowedExtensions.includes(ext.id)) {
-        chrome.management.setEnabled(ext.id, false);
+    try {
+      console.log('[STE] Activating monitoring with config:', config);
+      
+      // Merge configuration
+      this.config = { ...this.config, ...config };
+      this.isActive = true;
+      
+      console.log('[STE] Saving configuration to storage...');
+      await chrome.storage.local.set({
+        config: this.config,
+        isActive: this.isActive
+      });
+      
+      console.log('[STE] Starting monitoring...');
+      this.startMonitoring();
+      
+      // Disable unauthorized extensions
+      console.log('[STE] Checking extensions...');
+      try {
+        const extensions = await chrome.management.getAll();
+        for (const ext of extensions) {
+          if (ext.enabled && 
+              ext.id !== chrome.runtime.id && 
+              !this.config.allowedExtensions.includes(ext.id)) {
+            console.log(`[STE] Disabling unauthorized extension: ${ext.name} (${ext.id})`);
+            await chrome.management.setEnabled(ext.id, false);
+          }
+        }
+      } catch (error) {
+        console.warn('[STE] Could not manage extensions:', error.message);
+        // Don't fail activation if extension management fails
       }
+      
+      console.log('[STE] Monitoring activated successfully');
+    } catch (error) {
+      console.error('[STE] Failed to activate monitoring:', error);
+      this.isActive = false;
+      throw error;
     }
   }
 
@@ -1037,6 +1072,125 @@ class SecureTestingService {
     } catch (error) {
       console.error('Error getting open URLs:', error);
       return [];
+    }
+  }
+
+  async getSystemData() {
+    try {
+      const systemData = {
+        timestamp: Date.now(),
+        cpu: null,
+        memory: null,
+        battery: null,
+        displays: [],
+        network: null
+      };
+
+      // Get CPU info
+      try {
+        const cpuInfo = await chrome.system.cpu.getInfo();
+        if (cpuInfo && cpuInfo.processors && cpuInfo.processors.length > 0) {
+          // Calculate average usage across all processors
+          let totalUsage = 0;
+          let totalProcessors = 0;
+          
+          cpuInfo.processors.forEach(processor => {
+            if (processor.usage && processor.usage.total) {
+              totalUsage += (processor.usage.user + processor.usage.kernel) / processor.usage.total * 100;
+              totalProcessors++;
+            }
+          });
+          
+          systemData.cpu = {
+            usage: totalProcessors > 0 ? totalUsage / totalProcessors : 0,
+            processors: cpuInfo.processors.length,
+            modelName: cpuInfo.modelName || 'Unknown',
+            archName: cpuInfo.archName || 'Unknown'
+          };
+        }
+      } catch (error) {
+        console.log('[STE] CPU info not available:', error.message);
+        systemData.cpu = { usage: 0, processors: 0, modelName: 'Unknown', archName: 'Unknown' };
+      }
+
+      // Get memory info
+      try {
+        const memoryInfo = await chrome.system.memory.getInfo();
+        if (memoryInfo) {
+          const usedMemory = memoryInfo.capacity - memoryInfo.availableCapacity;
+          const usage = (usedMemory / memoryInfo.capacity) * 100;
+          
+          systemData.memory = {
+            usage: usage,
+            total: memoryInfo.capacity,
+            available: memoryInfo.availableCapacity,
+            used: usedMemory
+          };
+        }
+      } catch (error) {
+        console.log('[STE] Memory info not available:', error.message);
+        systemData.memory = { usage: 0, total: 0, available: 0, used: 0 };
+      }
+
+      // Get display info
+      try {
+        const displays = await chrome.system.display.getInfo();
+        systemData.displays = displays.map(display => ({
+          id: display.id,
+          name: display.name || `Display ${display.id}`,
+          bounds: display.bounds,
+          workArea: display.workArea,
+          isPrimary: display.isPrimary || false
+        }));
+      } catch (error) {
+        console.log('[STE] Display info not available:', error.message);
+        systemData.displays = [];
+      }
+
+      // Get battery info (if available)
+      try {
+        if (navigator.getBattery) {
+          const battery = await navigator.getBattery();
+          systemData.battery = {
+            level: battery.level,
+            charging: battery.charging,
+            chargingTime: battery.chargingTime,
+            dischargingTime: battery.dischargingTime
+          };
+        }
+      } catch (error) {
+        console.log('[STE] Battery info not available:', error.message);
+        systemData.battery = null;
+      }
+
+      // Get network info
+      try {
+        if (navigator.connection) {
+          systemData.network = {
+            effectiveType: navigator.connection.effectiveType,
+            downlink: navigator.connection.downlink,
+            rtt: navigator.connection.rtt,
+            saveData: navigator.connection.saveData
+          };
+        }
+      } catch (error) {
+        console.log('[STE] Network info not available:', error.message);
+        systemData.network = null;
+      }
+
+      console.log('[STE] System data collected:', systemData);
+      return systemData;
+    } catch (error) {
+      console.error('[STE] Error getting system data:', error);
+      return {
+        timestamp: Date.now(),
+        cpu: { usage: 0, processors: 0, modelName: 'Unknown', archName: 'Unknown' },
+        memory: { usage: 0, total: 0, available: 0, used: 0 },
+        battery: null,
+        displays: [],
+        network: null,
+        error: error.message
+      };
     }
   }
 }

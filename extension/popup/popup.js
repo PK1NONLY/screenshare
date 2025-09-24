@@ -326,16 +326,21 @@ class PopupController {
         config: this.config || {}
       });
       
-      if (response.success) {
+      console.log('[STE Popup] Activation response:', response);
+
+      if (response && response.success) {
         this.isActive = true;
         this.updateUI();
         this.showToast('Monitoring activated successfully', 'success');
+        console.log('[STE Popup] Monitoring activated successfully');
       } else {
-        this.showToast('Failed to activate monitoring', 'error');
+        const errorMsg = response?.error || 'Unknown error';
+        console.error('[STE Popup] Activation failed:', errorMsg);
+        this.showToast(`Failed to activate monitoring: ${errorMsg}`, 'error');
       }
     } catch (error) {
-      console.error('Failed to activate monitoring:', error);
-      this.showToast('Failed to activate monitoring', 'error');
+      console.error('[STE Popup] Failed to activate monitoring:', error);
+      this.showToast(`Failed to activate monitoring: ${error.message}`, 'error');
     } finally {
       this.showLoading(false);
     }
