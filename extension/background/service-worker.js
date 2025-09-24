@@ -1,6 +1,11 @@
 // Main service worker for Secure Testing Environment
-import './system-monitor.js';
-import './config-manager.js';
+// Import other modules using importScripts for compatibility
+try {
+  importScripts('./system-monitor.js', './config-manager.js');
+  console.log('[STE] Service Worker: Dependencies loaded successfully');
+} catch (error) {
+  console.error('[STE] Service Worker: Failed to load dependencies:', error);
+}
 
 class SecureTestingService {
   constructor() {
@@ -17,30 +22,47 @@ class SecureTestingService {
 
   async init() {
     try {
-      console.log('Secure Testing Environment: Service Worker initializing...');
+      console.log('[STE] Service Worker: Initializing...');
+      
+      // Check if dependencies are available
+      if (!self.systemMonitor) {
+        console.error('[STE] Service Worker: SystemMonitor not available');
+      } else {
+        console.log('[STE] Service Worker: SystemMonitor available');
+      }
+      
+      if (!self.configManager) {
+        console.error('[STE] Service Worker: ConfigManager not available');
+      } else {
+        console.log('[STE] Service Worker: ConfigManager available');
+      }
       
       // Initialize system monitor reference
       this.systemMonitor = self.systemMonitor;
       
       // Load configuration from storage
+      console.log('[STE] Service Worker: Loading configuration...');
       await this.loadConfiguration();
       
       // Set up event listeners
+      console.log('[STE] Service Worker: Setting up event listeners...');
       this.setupEventListeners();
       
       // Start system monitoring if active
       if (this.isActive) {
+        console.log('[STE] Service Worker: Starting monitoring...');
         this.startMonitoring();
       }
       
       this.isInitialized = true;
-      console.log('Secure Testing Environment: Service Worker initialized successfully');
+      console.log('[STE] Service Worker: Initialized successfully');
       
       // Notify all tabs that the extension is ready
+      console.log('[STE] Service Worker: Notifying tabs extension is ready...');
       this.notifyTabsExtensionReady();
       
     } catch (error) {
-      console.error('Secure Testing Environment: Initialization failed:', error);
+      console.error('[STE] Service Worker: Initialization failed:', error);
       this.isInitialized = false;
     }
   }
