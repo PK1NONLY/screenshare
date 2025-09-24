@@ -265,10 +265,17 @@ class AdminPanel {
       this.config.allowedUrls.forEach((url, index) => {
         const item = document.createElement('div');
         item.className = 'url-item';
-        item.innerHTML = `
-          <span class="url-text">${url}</span>
-          <button class="remove-btn" onclick="adminPanel.removeUrl(${index})">Remove</button>
-        `;
+        const urlSpan = document.createElement('span');
+        urlSpan.className = 'url-text';
+        urlSpan.textContent = url;
+        
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'remove-btn';
+        removeBtn.textContent = 'Remove';
+        removeBtn.onclick = () => this.removeUrl(index);
+        
+        item.appendChild(urlSpan);
+        item.appendChild(removeBtn);
         urlList.appendChild(item);
       });
     } else {
@@ -284,10 +291,17 @@ class AdminPanel {
       this.config.allowedExtensions.forEach((extensionId, index) => {
         const item = document.createElement('div');
         item.className = 'extension-item';
-        item.innerHTML = `
-          <span class="extension-text">${extensionId}</span>
-          <button class="remove-btn" onclick="adminPanel.removeExtension(${index})">Remove</button>
-        `;
+        const extSpan = document.createElement('span');
+        extSpan.className = 'extension-text';
+        extSpan.textContent = extensionId;
+        
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'remove-btn';
+        removeBtn.textContent = 'Remove';
+        removeBtn.onclick = () => this.removeExtension(index);
+        
+        item.appendChild(extSpan);
+        item.appendChild(removeBtn);
         extensionList.appendChild(item);
       });
     } else {

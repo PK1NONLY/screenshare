@@ -374,12 +374,18 @@ class KeyboardTracker {
     // Create notification element
     const notification = document.createElement('div');
     notification.className = 'ste-key-notification';
-    notification.innerHTML = `
-      <div class="ste-key-notification-content">
-        <strong>Key Combination Blocked</strong>
-        <p>${keyCombo} is not allowed during the test.</p>
-      </div>
-    `;
+    const content = document.createElement('div');
+    content.className = 'ste-key-notification-content';
+    
+    const title = document.createElement('strong');
+    title.textContent = 'Key Combination Blocked';
+    
+    const message = document.createElement('p');
+    message.textContent = `${keyCombo} is not allowed during the test.`;
+    
+    content.appendChild(title);
+    content.appendChild(message);
+    notification.appendChild(content);
 
     // Add styles
     const style = document.createElement('style');

@@ -598,13 +598,23 @@ class SecurityEnforcer {
     // Create notification element
     const notification = document.createElement('div');
     notification.className = `ste-notification ste-notification-${type}`;
-    notification.innerHTML = `
-      <div class="ste-notification-content">
-        <strong>${title}</strong>
-        <p>${message}</p>
-      </div>
-      <button class="ste-notification-close">&times;</button>
-    `;
+    const content = document.createElement('div');
+    content.className = 'ste-notification-content';
+    
+    const titleElement = document.createElement('strong');
+    titleElement.textContent = title;
+    
+    const messageElement = document.createElement('p');
+    messageElement.textContent = message;
+    
+    const closeButton = document.createElement('button');
+    closeButton.className = 'ste-notification-close';
+    closeButton.textContent = '×';
+    
+    content.appendChild(titleElement);
+    content.appendChild(messageElement);
+    notification.appendChild(content);
+    notification.appendChild(closeButton);
 
     // Add styles
     const style = document.createElement('style');

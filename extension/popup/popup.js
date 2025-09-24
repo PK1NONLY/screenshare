@@ -264,10 +264,16 @@ class PopupController {
             minute: '2-digit'
           });
           
-          item.innerHTML = `
-            <span class="activity-time">${time}</span>
-            <span class="activity-text">${this.formatActivityText(activity)}</span>
-          `;
+          const timeSpan = document.createElement('span');
+          timeSpan.className = 'activity-time';
+          timeSpan.textContent = time;
+          
+          const textSpan = document.createElement('span');
+          textSpan.className = 'activity-text';
+          textSpan.textContent = this.formatActivityText(activity);
+          
+          item.appendChild(timeSpan);
+          item.appendChild(textSpan);
           
           activityList.appendChild(item);
         });
