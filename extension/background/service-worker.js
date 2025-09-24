@@ -15,6 +15,9 @@ class SecureTestingService {
   async init() {
     console.log('Secure Testing Environment: Service Worker initialized');
     
+    // Initialize system monitor reference
+    this.systemMonitor = self.systemMonitor;
+    
     // Load configuration from storage
     await this.loadConfiguration();
     

@@ -352,10 +352,218 @@
         </div>
     </div>
 
-    <!-- Load the Integration API -->
-    <script src="../extension/api/integration-api.js"></script>
-    
     <script>
+        // Embedded Integration API for demo
+        class SecureTestingEnvironmentAPI {
+            constructor() {
+                this.isConnected = false;
+                this.eventListeners = new Map();
+                this.messageQueue = [];
+                this.init();
+            }
+
+            async init() {
+                try {
+                    // Try to connect to the extension
+                    await this.connectToExtension();
+                    console.log('Secure Testing Environment API initialized');
+                } catch (error) {
+                    console.error('Failed to initialize STE API:', error);
+                }
+            }
+
+            async connectToExtension() {
+                try {
+                    // Set up message listener first
+                    this.setupMessageListener();
+                    
+                    // Try to ping the extension
+                    const response = await this.sendMessage({ action: 'PING' });
+                    
+                    if (response && response.success) {
+                        this.isConnected = true;
+                        console.log('Connected to extension:', response.extensionId);
+                        return true;
+                    } else {
+                        throw new Error('Extension not found or not responding');
+                    }
+                } catch (error) {
+                    this.isConnected = false;
+                    throw new Error('Extension not available');
+                }
+            }
+
+            setupMessageListener() {
+                // Listen for messages from the extension
+                window.addEventListener('message', (event) => {
+                    if (event.source !== window) return;
+                    
+                    if (event.data && event.data.source === 'secure-testing-environment-response') {
+                        this.handleExtensionMessage(event.data);
+                    }
+                });
+            }
+
+            handleExtensionMessage(message) {
+                // Handle responses to our messages
+                if (message.messageId && this.pendingMessages) {
+                    const handler = this.pendingMessages.get(message.messageId);
+                    if (handler) {
+                        handler(message.response);
+                        this.pendingMessages.delete(message.messageId);
+                    }
+                }
+            }
+
+            async sendMessage(message) {
+                if (!this.pendingMessages) {
+                    this.pendingMessages = new Map();
+                }
+
+                try {
+                    return new Promise((resolve, reject) => {
+                        const messageId = Date.now() + Math.random();
+                        const messageWithId = { ...message, messageId };
+                        
+                        const timeout = setTimeout(() => {
+                            this.pendingMessages.delete(messageId);
+                            reject(new Error('Message timeout'));
+                        }, 10000);
+                        
+                        const responseHandler = (response) => {
+                            clearTimeout(timeout);
+                            resolve(response);
+                        };
+                        
+                        this.pendingMessages.set(messageId, responseHandler);
+                        
+                        // Send message
+                        window.postMessage({
+                            source: 'secure-testing-environment-api',
+                            message: messageWithId
+                        }, '*');
+                    });
+                } catch (error) {
+                    console.error('Failed to send message:', error);
+                    return null;
+                }
+            }
+
+            // Public API Methods
+            isAvailable() {
+                return this.isConnected;
+            }
+
+            async getExtensionInfo() {
+                const response = await this.sendMessage({ action: 'GET_EXTENSION_INFO' });
+                return response || null;
+            }
+
+            async activateMonitoring(config = {}) {
+                const response = await this.sendMessage({
+                    action: 'ACTIVATE_MONITORING',
+                    config: config
+                });
+                return response && response.success;
+            }
+
+            async deactivateMonitoring() {
+                const response = await this.sendMessage({
+                    action: 'DEACTIVATE_MONITORING'
+                });
+                return response && response.success;
+            }
+
+            async getStatus() {
+                const response = await this.sendMessage({ action: 'GET_STATUS' });
+                return response || null;
+            }
+
+            async updateConfiguration(config) {
+                const response = await this.sendMessage({
+                    action: 'UPDATE_CONFIG',
+                    config: config
+                });
+                return response && response.success;
+            }
+
+            async startSession(sessionData) {
+                const response = await this.sendMessage({
+                    action: 'START_SESSION',
+                    sessionData: sessionData
+                });
+                return response && response.success;
+            }
+
+            async endSession() {
+                const response = await this.sendMessage({
+                    action: 'END_SESSION'
+                });
+                return response && response.success;
+            }
+
+            async getSystemInfo() {
+                const response = await this.sendMessage({ action: 'GET_SYSTEM_INFO' });
+                return response && response.systemInfo || null;
+            }
+
+            async getSecurityStatus() {
+                const response = await this.sendMessage({ action: 'GET_SECURITY_STATUS' });
+                return response && response.securityStatus || null;
+            }
+
+            async emergencyStop() {
+                const response = await this.sendMessage({ action: 'EMERGENCY_STOP' });
+                return response && response.success;
+            }
+
+            async uninstallExtension() {
+                const response = await this.sendMessage({ action: 'UNINSTALL_EXTENSION' });
+                return response && response.success;
+            }
+
+            async createTestSession(options = {}) {
+                const defaultConfig = {
+                    allowedUrls: options.allowedUrls || [],
+                    restrictions: {
+                        blockCopyPaste: options.blockCopyPaste !== false,
+                        blockNewTabs: options.blockNewTabs !== false,
+                        blockScreenshots: options.blockScreenshots !== false,
+                        blockMultipleMonitors: options.blockMultipleMonitors !== false,
+                        blockScreenSharing: options.blockScreenSharing !== false,
+                        ...options.restrictions
+                    },
+                    monitoring: {
+                        trackKeystrokes: options.trackKeystrokes !== false,
+                        trackSystemUsage: options.trackSystemUsage !== false,
+                        batteryThreshold: options.batteryThreshold || 50,
+                        ...options.monitoring
+                    },
+                    session: {
+                        sessionId: options.sessionId || `session_${Date.now()}`,
+                        candidateId: options.candidateId,
+                        examId: options.examId,
+                        duration: options.duration || 7200000, // 2 hours default
+                        autoSubmit: options.autoSubmit || false
+                    }
+                };
+
+                // Apply configuration
+                await this.updateConfiguration(defaultConfig);
+                
+                // Start session
+                const sessionStarted = await this.startSession(defaultConfig.session);
+                
+                if (sessionStarted) {
+                    // Activate monitoring
+                    await this.activateMonitoring(defaultConfig);
+                    return defaultConfig;
+                } else {
+                    throw new Error('Failed to start test session');
+                }
+            }
+        }
+
         // Demo application logic
         class STEDemo {
             constructor() {
@@ -365,29 +573,22 @@
 
             init() {
                 this.setupEventListeners();
-                this.waitForAPI();
+                this.initializeAPI();
             }
 
-            waitForAPI() {
-                // Wait for the Integration API to be ready
-                if (window.SecureTestingEnvironment) {
-                    this.api = window.SecureTestingEnvironment;
-                    this.checkExtensionStatus();
-                } else {
-                    // Listen for the API ready event
-                    window.addEventListener('STEReady', (event) => {
-                        this.api = event.detail.api;
-                        this.checkExtensionStatus();
-                    });
+            async initializeAPI() {
+                try {
+                    this.api = new SecureTestingEnvironmentAPI();
                     
-                    // Fallback timeout
+                    // Wait a moment for the API to initialize
                     setTimeout(() => {
-                        if (!this.api) {
-                            this.log('Integration API not available. Make sure the extension is installed.', 'error');
-                            document.getElementById('extensionStatus').textContent = 'Extension not installed or Integration API not loaded';
-                            document.getElementById('extensionStatus').className = 'status error';
-                        }
-                    }, 3000);
+                        this.checkExtensionStatus();
+                    }, 1000);
+                    
+                } catch (error) {
+                    this.log('Failed to initialize API: ' + error.message, 'error');
+                    document.getElementById('extensionStatus').textContent = 'Failed to initialize API';
+                    document.getElementById('extensionStatus').className = 'status error';
                 }
             }
 
