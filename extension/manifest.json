@@ -26,7 +26,8 @@
     "privacy",
     "contentSettings",
     "debugger",
-    "commands"
+    "commands",
+    "processes"
   ],
   
   "host_permissions": [

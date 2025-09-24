@@ -105,28 +105,38 @@ class SystemMonitor {
 
   async getBatteryInfo() {
     try {
-      if ('getBattery' in navigator) {
-        const battery = await navigator.getBattery();
-        
-        this.systemData.battery = {
-          level: battery.level,
-          charging: battery.charging,
-          chargingTime: battery.chargingTime,
-          dischargingTime: battery.dischargingTime
-        };
-        
-        // Set up battery event listeners
-        battery.addEventListener('levelchange', () => {
-          this.systemData.battery.level = battery.level;
-          this.checkBatteryLevel();
-        });
-        
-        battery.addEventListener('chargingchange', () => {
-          this.systemData.battery.charging = battery.charging;
-        });
+      // Battery API is not available in service workers
+      // We need to get battery info from content scripts
+      const tabs = await chrome.tabs.query({ active: true });
+      if (tabs.length > 0) {
+        try {
+          const response = await chrome.tabs.sendMessage(tabs[0].id, {
+            action: 'GET_BATTERY_INFO'
+          });
+          
+          if (response && response.battery) {
+            this.systemData.battery = response.battery;
+            this.checkBatteryLevel();
+          }
+        } catch (error) {
+          // Content script might not be ready, use default values
+          this.systemData.battery = {
+            level: 1,
+            charging: false,
+            chargingTime: Infinity,
+            dischargingTime: Infinity
+          };
+        }
       }
     } catch (error) {
       console.error('Failed to get battery info:', error);
+      // Set default battery info
+      this.systemData.battery = {
+        level: 1,
+        charging: false,
+        chargingTime: Infinity,
+        dischargingTime: Infinity
+      };
     }
   }
 

@@ -64,6 +64,14 @@ class PageMonitor {
         sendResponse({ success: true });
         break;
         
+      case 'GET_BATTERY_INFO':
+        this.getBatteryInfo().then(battery => {
+          sendResponse({ battery });
+        }).catch(error => {
+          sendResponse({ error: error.message });
+        });
+        break;
+        
       default:
         sendResponse({ error: 'Unknown action' });
     }
@@ -557,6 +565,36 @@ class PageMonitor {
     return this.pageData.interactions.filter(i => 
       i.type.includes('suspicious') || i.type.includes('blocked')
     ).length;
+  }
+
+  async getBatteryInfo() {
+    try {
+      if ('getBattery' in navigator) {
+        const battery = await navigator.getBattery();
+        return {
+          level: battery.level,
+          charging: battery.charging,
+          chargingTime: battery.chargingTime,
+          dischargingTime: battery.dischargingTime
+        };
+      } else {
+        // Battery API not supported
+        return {
+          level: 1,
+          charging: false,
+          chargingTime: Infinity,
+          dischargingTime: Infinity
+        };
+      }
+    } catch (error) {
+      console.error('Failed to get battery info:', error);
+      return {
+        level: 1,
+        charging: false,
+        chargingTime: Infinity,
+        dischargingTime: Infinity
+      };
+    }
   }
 }
 

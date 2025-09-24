@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extension Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #log {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>Secure Testing Environment - Extension Test</h1>
+    
+    <div id="status" class="status info">
+        Checking extension status...
+    </div>
+    
+    <div>
+        <h3>Test Actions:</h3>
+        <button onclick="testCopyPaste()">Test Copy/Paste Block</button>
+        <button onclick="testNewTab()">Test New Tab Block</button>
+        <button onclick="testKeyboardTracking()">Test Keyboard Tracking</button>
+        <button onclick="testBatteryInfo()">Test Battery Info</button>
+        <button onclick="testSystemInfo()">Test System Info</button>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+    
+    <div>
+        <h3>Integration API Test:</h3>
+        <button onclick="activateExtension()">Activate Extension</button>
+        <button onclick="deactivateExtension()">Deactivate Extension</button>
+        <button onclick="getExtensionStatus()">Get Status</button>
+    </div>
+    
+    <div>
+        <h3>Log Output:</h3>
+        <div id="log"></div>
+    </div>
+
+    <script>
+        let logElement = document.getElementById('log');
+        let statusElement = document.getElementById('status');
+
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            logElement.textContent += `[${timestamp}] ${message}\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        function clearLog() {
+            logElement.textContent = '';
+        }
+
+        function updateStatus(message, type = 'info') {
+            statusElement.textContent = message;
+            statusElement.className = `status ${type}`;
+        }
+
+        // Check if extension is available
+        function checkExtension() {
+            if (typeof chrome !== 'undefined' && chrome.runtime) {
+                try {
+                    chrome.runtime.sendMessage('your-extension-id', { action: 'GET_STATUS' }, (response) => {
+                        if (chrome.runtime.lastError) {
+                            updateStatus('Extension not found or not responding', 'error');
+                            log('Extension check failed: ' + chrome.runtime.lastError.message);
+                        } else {
+                            updateStatus('Extension is active and responding', 'success');
+                            log('Extension status: ' + JSON.stringify(response));
+                        }
+                    });
+                } catch (error) {
+                    updateStatus('Error checking extension: ' + error.message, 'error');
+                    log('Extension check error: ' + error.message);
+                }
+            } else {
+                updateStatus('Chrome extension APIs not available', 'error');
+                log('Chrome extension APIs not available');
+            }
+        }
+
+        // Test functions
+        function testCopyPaste() {
+            log('Testing copy/paste functionality...');
+            
+            // Try to copy some text
+            const testText = 'This is a test copy operation';
+            navigator.clipboard.writeText(testText).then(() => {
+                log('Copy operation succeeded (should be blocked if extension is active)');
+            }).catch(error => {
+                log('Copy operation blocked: ' + error.message);
+            });
+            
+            // Try to paste
+            navigator.clipboard.readText().then(text => {
+                log('Paste operation succeeded: ' + text);
+            }).catch(error => {
+                log('Paste operation blocked: ' + error.message);
+            });
+        }
+
+        function testNewTab() {
+            log('Testing new tab blocking...');
+            try {
+                const newWindow = window.open('https://www.google.com', '_blank');
+                if (newWindow) {
+                    log('New tab opened successfully (should be blocked if extension is active)');
+                    setTimeout(() => newWindow.close(), 2000);
+                } else {
+                    log('New tab blocked by browser or extension');
+                }
+            } catch (error) {
+                log('New tab blocked: ' + error.message);
+            }
+        }
+
+        function testKeyboardTracking() {
+            log('Testing keyboard tracking... Type something in the input below:');
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.placeholder = 'Type here to test keyboard tracking';
+            input.style.width = '100%';
+            input.style.padding = '10px';
+            input.style.margin = '10px 0';
+            
+            input.addEventListener('keydown', (e) => {
+                log(`Key pressed: ${e.key} (Code: ${e.code})`);
+            });
+            
+            document.body.appendChild(input);
+            input.focus();
+        }
+
+        function testBatteryInfo() {
+            log('Testing battery information...');
+            if ('getBattery' in navigator) {
+                navigator.getBattery().then(battery => {
+                    log(`Battery Level: ${(battery.level * 100).toFixed(1)}%`);
+                    log(`Charging: ${battery.charging}`);
+                    log(`Charging Time: ${battery.chargingTime} seconds`);
+                    log(`Discharging Time: ${battery.dischargingTime} seconds`);
+                }).catch(error => {
+                    log('Battery API error: ' + error.message);
+                });
+            } else {
+                log('Battery API not supported in this browser');
+            }
+        }
+
+        function testSystemInfo() {
+            log('Testing system information...');
+            log(`User Agent: ${navigator.userAgent}`);
+            log(`Platform: ${navigator.platform}`);
+            log(`Language: ${navigator.language}`);
+            log(`Online: ${navigator.onLine}`);
+            log(`Screen Resolution: ${screen.width}x${screen.height}`);
+            log(`Available Screen: ${screen.availWidth}x${screen.availHeight}`);
+            log(`Color Depth: ${screen.colorDepth}`);
+            log(`Pixel Depth: ${screen.pixelDepth}`);
+        }
+
+        // Integration API functions
+        function activateExtension() {
+            log('Attempting to activate extension via Integration API...');
+            if (window.SecureTestingEnvironment) {
+                window.SecureTestingEnvironment.activate({
+                    restrictions: {
+                        blockNewTabs: true,
+                        blockCopyPaste: true,
+                        blockScreenSharing: true,
+                        blockMultipleMonitors: true
+                    },
+                    allowedUrls: ['https://example.com'],
+                    allowedExtensions: []
+                }).then(result => {
+                    log('Extension activated: ' + JSON.stringify(result));
+                }).catch(error => {
+                    log('Activation failed: ' + error.message);
+                });
+            } else {
+                log('Integration API not available');
+            }
+        }
+
+        function deactivateExtension() {
+            log('Attempting to deactivate extension...');
+            if (window.SecureTestingEnvironment) {
+                window.SecureTestingEnvironment.deactivate().then(result => {
+                    log('Extension deactivated: ' + JSON.stringify(result));
+                }).catch(error => {
+                    log('Deactivation failed: ' + error.message);
+                });
+            } else {
+                log('Integration API not available');
+            }
+        }
+
+        function getExtensionStatus() {
+            log('Getting extension status...');
+            if (window.SecureTestingEnvironment) {
+                window.SecureTestingEnvironment.getStatus().then(status => {
+                    log('Extension status: ' + JSON.stringify(status, null, 2));
+                }).catch(error => {
+                    log('Status check failed: ' + error.message);
+                });
+            } else {
+                log('Integration API not available');
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            log('Test page loaded');
+            checkExtension();
+            
+            // Check for Integration API
+            setTimeout(() => {
+                if (window.SecureTestingEnvironment) {
+                    log('Integration API is available');
+                    updateStatus('Extension Integration API is available', 'success');
+                } else {
+                    log('Integration API not found');
+                }
+            }, 1000);
+        });
+
+        // Monitor for extension events
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.source === 'secure-testing-environment') {
+                log('Extension event: ' + JSON.stringify(event.data));
+            }
+        });
+    </script>
+</body>
+</html>

@@ -91,8 +91,8 @@ class SecureTestingService {
     // Keyboard shortcuts
     chrome.commands.onCommand.addListener(this.handleCommand.bind(this));
 
-    // Desktop capture
-    chrome.desktopCapture.onStarted.addListener(this.handleScreenCaptureStarted.bind(this));
+    // Note: chrome.desktopCapture.onStarted doesn't exist in Chrome Extensions API
+    // Screen capture detection is handled through other means in system monitoring
   }
 
   async handleTabCreated(tab) {
