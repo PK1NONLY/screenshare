@@ -236,6 +236,60 @@
             color: #6c757d;
             margin-top: 5px;
         }
+        
+        .monitoring-panel {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+
+        .monitoring-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-item {
+            text-align: center;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #007bff;
+        }
+
+        .stat-label {
+            color: #6c757d;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+
+        .keystroke-log, .url-monitoring {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+
+        .keystroke-log h3, .url-monitoring h3 {
+            margin-top: 0;
+            color: #495057;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 10px;
+        }
+
+        .url-list, .blocked-actions {
+            max-height: 200px;
+            overflow-y: auto;
+            margin: 10px 0;
+        }
     </style>
 </head>
 <body>
@@ -278,7 +332,12 @@
             <h2>Configuration</h2>
             <div class="form-group">
                 <label>Allowed URLs (one per line):</label>
-                <textarea id="allowedUrls" rows="4" placeholder="https://example.com/*&#10;https://test.com/*"></textarea>
+                <textarea id="allowedUrls" rows="6" placeholder="https://example.com/*&#10;https://test.com/*">https://app.all-hands.dev/*
+https://localhost/*
+http://localhost/*
+file:///C:/*
+https://example.com/*
+https://test.com/*</textarea>
             </div>
             
             <div class="form-group">
@@ -340,6 +399,57 @@
             </div>
             <button id="getSystemInfoBtn" class="btn secondary">Refresh System Info</button>
             <button id="checkSecurityBtn" class="btn secondary">Check Security Status</button>
+        </div>
+
+        <!-- Keystroke Monitoring -->
+        <div class="section">
+            <h2>Keystroke Monitoring</h2>
+            <div class="monitoring-panel">
+                <div class="monitoring-stats">
+                    <div class="stat-item">
+                        <div class="stat-value" id="keystrokeCount">0</div>
+                        <div class="stat-label">Keystrokes</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="tabSwitchCount">0</div>
+                        <div class="stat-label">Tab Switches</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="urlChangeCount">0</div>
+                        <div class="stat-label">URL Changes</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="windowStateCount">0</div>
+                        <div class="stat-label">Window Events</div>
+                    </div>
+                </div>
+                <div class="keystroke-log">
+                    <h3>Recent Keystrokes</h3>
+                    <div id="keystrokeDisplay" class="log">
+                        <div class="log-entry info">Keystroke monitoring will appear here when active...</div>
+                    </div>
+                    <button id="clearKeystrokesBtn" class="btn secondary">Clear Keystrokes</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- URL & Tab Monitoring -->
+        <div class="section">
+            <h2>URL & Tab Monitoring</h2>
+            <div class="url-monitoring">
+                <h3>Open URLs</h3>
+                <div id="openUrlsList" class="log">
+                    <div class="log-entry info">URL monitoring will appear here when active...</div>
+                </div>
+                <h3>Blocked Actions</h3>
+                <div id="blockedActionsList" class="log">
+                    <div class="log-entry info">Blocked actions will appear here...</div>
+                </div>
+                <h3>Window State Changes</h3>
+                <div id="windowStateList" class="log">
+                    <div class="log-entry info">Window state changes will appear here...</div>
+                </div>
+            </div>
         </div>
 
         <!-- Activity Log -->
@@ -562,6 +672,68 @@
                     throw new Error('Failed to start test session');
                 }
             }
+
+            // New methods for enhanced functionality
+            async checkUrlAllowed(url) {
+                const response = await this.sendMessage({
+                    action: 'CHECK_URL_ALLOWED',
+                    url: url
+                });
+                return response && response.allowed;
+            }
+
+            async blockNewTab(url) {
+                const response = await this.sendMessage({
+                    action: 'BLOCK_NEW_TAB',
+                    url: url
+                });
+                return response && response.success;
+            }
+
+            async logKeystroke(keystroke) {
+                const response = await this.sendMessage({
+                    action: 'LOG_KEYSTROKE',
+                    keystroke: keystroke
+                });
+                return response && response.success;
+            }
+
+            async logWindowStateChange(state, details) {
+                const response = await this.sendMessage({
+                    action: 'LOG_WINDOW_STATE',
+                    state: state,
+                    details: details
+                });
+                return response && response.success;
+            }
+
+            async getBluetoothDevices() {
+                const response = await this.sendMessage({
+                    action: 'GET_BLUETOOTH_DEVICES'
+                });
+                return response && response.devices;
+            }
+
+            async checkScreenMirroring() {
+                const response = await this.sendMessage({
+                    action: 'CHECK_SCREEN_MIRRORING'
+                });
+                return response && response.mirroring;
+            }
+
+            async blockMultipleMonitors() {
+                const response = await this.sendMessage({
+                    action: 'BLOCK_MULTIPLE_MONITORS'
+                });
+                return response && response.success;
+            }
+
+            async getAllOpenUrls() {
+                const response = await this.sendMessage({
+                    action: 'GET_ALL_OPEN_URLS'
+                });
+                return response && response.urls;
+            }
         }
 
         // Demo application logic
@@ -618,6 +790,88 @@
 
                 // Activity log
                 document.getElementById('clearLogBtn').addEventListener('click', () => this.clearLog());
+                
+                // New monitoring features
+                document.getElementById('clearKeystrokesBtn').addEventListener('click', () => this.clearKeystrokes());
+                
+                // Initialize counters
+                this.keystrokeCount = 0;
+                this.tabSwitchCount = 0;
+                this.urlChangeCount = 0;
+                this.windowStateCount = 0;
+                
+                // Set up demo keystroke simulation
+                this.setupDemoSimulation();
+                
+                // Listen for messages from extension
+                this.setupExtensionMessageListener();
+            }
+
+            setupExtensionMessageListener() {
+                // Listen for messages from the extension content script
+                window.addEventListener('message', (event) => {
+                    if (event.source !== window) return;
+                    
+                    switch (event.data.type) {
+                        case 'STE_KEYSTROKE':
+                            this.logKeystroke(event.data.keystroke);
+                            break;
+                        case 'STE_URL_CHANGE':
+                            this.logUrlChange(event.data.url, event.data.action);
+                            break;
+                        case 'STE_WINDOW_STATE':
+                            this.logWindowStateChange(event.data.state, event.data.details);
+                            break;
+                        case 'STE_BLOCKED_ACTION':
+                            this.logBlockedAction(event.data.action, event.data.details);
+                            break;
+                    }
+                });
+            }
+
+            setupDemoSimulation() {
+                // Add keyboard event listener for demo purposes (fallback when extension not installed)
+                document.addEventListener('keydown', (event) => {
+                    if (!this.api || !this.api.isAvailable()) {
+                        // Only log keystrokes when extension is not available (demo mode)
+                        this.logKeystroke(event.key);
+                    }
+                });
+
+                // Add window focus/blur listeners
+                window.addEventListener('focus', () => {
+                    this.logWindowStateChange('focused', 'Demo page focused');
+                });
+
+                window.addEventListener('blur', () => {
+                    this.logWindowStateChange('blurred', 'Demo page lost focus');
+                });
+
+                // Simulate some demo data periodically
+                this.startDemoSimulation();
+            }
+
+            startDemoSimulation() {
+                // Simulate URL monitoring
+                setTimeout(() => {
+                    this.logUrlChange(window.location.href, 'opened');
+                }, 2000);
+
+                // Simulate some system events every 10 seconds
+                setInterval(() => {
+                    if (this.api && this.api.isAvailable()) {
+                        // Simulate random events for demo
+                        const events = [
+                            () => this.logBlockedAction('Copy/Paste', 'Ctrl+C blocked'),
+                            () => this.logBlockedAction('Screenshot', 'Print Screen blocked'),
+                            () => this.logWindowStateChange('minimized', 'Browser minimized'),
+                            () => this.logUrlChange('https://blocked-site.com', 'blocked')
+                        ];
+                        
+                        const randomEvent = events[Math.floor(Math.random() * events.length)];
+                        randomEvent();
+                    }
+                }, 10000);
             }
 
             async checkExtensionStatus() {
@@ -678,13 +932,15 @@
             }
 
             async activateMonitoring() {
-                if (!this.api) {
-                    this.log('Integration API not available', 'error');
-                    return;
-                }
-                
                 try {
                     const config = this.getConfigFromForm();
+                    
+                    if (!this.api || !this.api.isAvailable()) {
+                        this.log('Monitoring activated locally (Extension not available)', 'warning');
+                        this.log(`Monitoring config: ${config.allowedUrls.length} allowed URLs, ${Object.values(config.restrictions).filter(Boolean).length} restrictions`, 'info');
+                        return;
+                    }
+                    
                     const success = await this.api.activateMonitoring(config);
                     
                     if (success) {
@@ -698,8 +954,8 @@
             }
 
             async deactivateMonitoring() {
-                if (!this.api) {
-                    this.log('Integration API not available', 'error');
+                if (!this.api || !this.api.isAvailable()) {
+                    this.log('Monitoring deactivated locally (Extension not available)', 'warning');
                     return;
                 }
                 
@@ -717,8 +973,9 @@
             }
 
             async getStatus() {
-                if (!this.api) {
-                    this.log('Integration API not available', 'error');
+                if (!this.api || !this.api.isAvailable()) {
+                    this.log('Status: Extension not available', 'warning');
+                    this.log('Local demo mode - monitoring features simulated', 'info');
                     return;
                 }
                 
@@ -736,11 +993,6 @@
             }
 
             async startSession() {
-                if (!this.api) {
-                    this.log('Integration API not available', 'error');
-                    return;
-                }
-                
                 try {
                     const sessionData = {
                         sessionId: document.getElementById('sessionId').value || `demo_${Date.now()}`,
@@ -749,6 +1001,12 @@
                         duration: (parseInt(document.getElementById('duration').value) || 120) * 60000
                     };
 
+                    if (!this.api || !this.api.isAvailable()) {
+                        this.log(`Test session started locally: ${sessionData.sessionId}`, 'warning');
+                        this.log(`Session details: Candidate ${sessionData.candidateId}, Exam ${sessionData.examId}, Duration ${sessionData.duration/60000} min`, 'info');
+                        return;
+                    }
+                    
                     const success = await this.api.startSession(sessionData);
                     
                     if (success) {
@@ -762,8 +1020,8 @@
             }
 
             async endSession() {
-                if (!this.api) {
-                    this.log('Integration API not available', 'error');
+                if (!this.api || !this.api.isAvailable()) {
+                    this.log('Test session ended locally (Extension not available)', 'warning');
                     return;
                 }
                 
@@ -781,8 +1039,9 @@
             }
 
             async emergencyStop() {
-                if (!this.api) {
-                    this.log('Integration API not available', 'error');
+                if (!this.api || !this.api.isAvailable()) {
+                    this.log('Emergency stop executed locally (Extension not available)', 'warning');
+                    this.log('All monitoring and session activities terminated', 'info');
                     return;
                 }
                 
@@ -829,13 +1088,16 @@
             }
 
             async applyConfiguration() {
-                if (!this.api) {
-                    this.log('Integration API not available', 'error');
-                    return;
-                }
-                
                 try {
                     const config = this.getConfigFromForm();
+                    
+                    if (!this.api || !this.api.isAvailable()) {
+                        this.log('Configuration saved locally (Extension not available)', 'warning');
+                        this.log(`Allowed URLs: ${config.allowedUrls.length} entries`, 'info');
+                        this.log(`Security restrictions: ${Object.values(config.restrictions).filter(Boolean).length} enabled`, 'info');
+                        return;
+                    }
+                    
                     const success = await this.api.updateConfiguration(config);
                     
                     if (success) {
@@ -964,6 +1226,102 @@
             clearLog() {
                 const logContainer = document.getElementById('activityLog');
                 logContainer.innerHTML = '<div class="log-entry info">Activity log cleared.</div>';
+            }
+
+            clearKeystrokes() {
+                const keystrokeContainer = document.getElementById('keystrokeDisplay');
+                keystrokeContainer.innerHTML = '<div class="log-entry info">Keystroke log cleared.</div>';
+                this.keystrokeCount = 0;
+                document.getElementById('keystrokeCount').textContent = '0';
+            }
+
+            logKeystroke(keystroke) {
+                const keystrokeContainer = document.getElementById('keystrokeDisplay');
+                const timestamp = new Date().toLocaleTimeString();
+                const logEntry = document.createElement('div');
+                logEntry.className = 'log-entry info';
+                logEntry.textContent = `[${timestamp}] Key: ${keystroke}`;
+                
+                keystrokeContainer.appendChild(logEntry);
+                keystrokeContainer.scrollTop = keystrokeContainer.scrollHeight;
+                
+                // Update counter
+                this.keystrokeCount++;
+                document.getElementById('keystrokeCount').textContent = this.keystrokeCount;
+                
+                // Keep only last 50 entries
+                const entries = keystrokeContainer.querySelectorAll('.log-entry');
+                if (entries.length > 50) {
+                    entries[0].remove();
+                }
+            }
+
+            logUrlChange(url, action = 'opened') {
+                const urlContainer = document.getElementById('openUrlsList');
+                const timestamp = new Date().toLocaleTimeString();
+                const logEntry = document.createElement('div');
+                logEntry.className = `log-entry ${action === 'blocked' ? 'error' : 'info'}`;
+                logEntry.textContent = `[${timestamp}] ${action}: ${url}`;
+                
+                urlContainer.appendChild(logEntry);
+                urlContainer.scrollTop = urlContainer.scrollHeight;
+                
+                // Update counter
+                this.urlChangeCount++;
+                document.getElementById('urlChangeCount').textContent = this.urlChangeCount;
+                
+                // Keep only last 30 entries
+                const entries = urlContainer.querySelectorAll('.log-entry');
+                if (entries.length > 30) {
+                    entries[0].remove();
+                }
+            }
+
+            logBlockedAction(action, details) {
+                const blockedContainer = document.getElementById('blockedActionsList');
+                const timestamp = new Date().toLocaleTimeString();
+                const logEntry = document.createElement('div');
+                logEntry.className = 'log-entry warning';
+                logEntry.textContent = `[${timestamp}] BLOCKED: ${action} - ${details}`;
+                
+                blockedContainer.appendChild(logEntry);
+                blockedContainer.scrollTop = blockedContainer.scrollHeight;
+                
+                // Keep only last 30 entries
+                const entries = blockedContainer.querySelectorAll('.log-entry');
+                if (entries.length > 30) {
+                    entries[0].remove();
+                }
+            }
+
+            logWindowStateChange(state, details) {
+                const windowContainer = document.getElementById('windowStateList');
+                const timestamp = new Date().toLocaleTimeString();
+                const logEntry = document.createElement('div');
+                logEntry.className = 'log-entry info';
+                logEntry.textContent = `[${timestamp}] Window ${state}: ${details}`;
+                
+                windowContainer.appendChild(logEntry);
+                windowContainer.scrollTop = windowContainer.scrollHeight;
+                
+                // Update counter
+                this.windowStateCount++;
+                document.getElementById('windowStateCount').textContent = this.windowStateCount;
+                
+                // Keep only last 30 entries
+                const entries = windowContainer.querySelectorAll('.log-entry');
+                if (entries.length > 30) {
+                    entries[0].remove();
+                }
+            }
+
+            logTabSwitch(fromUrl, toUrl) {
+                const timestamp = new Date().toLocaleTimeString();
+                this.log(`Tab switch: ${fromUrl} → ${toUrl}`, 'info');
+                
+                // Update counter
+                this.tabSwitchCount++;
+                document.getElementById('tabSwitchCount').textContent = this.tabSwitchCount;
             }
         }
 

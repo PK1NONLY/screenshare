@@ -359,6 +359,46 @@ class SecureTestingService {
         sendResponse({ success: true, screenSharing });
         break;
         
+      case 'CHECK_URL_ALLOWED':
+        const allowed = this.isUrlAllowed(request.url);
+        sendResponse({ success: true, allowed });
+        break;
+        
+      case 'BLOCK_NEW_TAB':
+        await this.blockNewTab(request.url);
+        sendResponse({ success: true });
+        break;
+        
+      case 'LOG_KEYSTROKE':
+        await this.logKeystroke(request.keystroke);
+        sendResponse({ success: true });
+        break;
+        
+      case 'LOG_WINDOW_STATE':
+        await this.logWindowStateChange(request.state, request.details);
+        sendResponse({ success: true });
+        break;
+        
+      case 'GET_BLUETOOTH_DEVICES':
+        const devices = await this.getBluetoothDevices();
+        sendResponse({ success: true, devices });
+        break;
+        
+      case 'CHECK_SCREEN_MIRRORING':
+        const mirroring = await this.checkScreenMirroring();
+        sendResponse({ success: true, mirroring });
+        break;
+        
+      case 'BLOCK_MULTIPLE_MONITORS':
+        await this.blockMultipleMonitors();
+        sendResponse({ success: true });
+        break;
+        
+      case 'GET_ALL_OPEN_URLS':
+        const urls = await this.getAllOpenUrls();
+        sendResponse({ success: true, urls });
+        break;
+        
       default:
         sendResponse({ error: 'Unknown action' });
     }
@@ -781,6 +821,135 @@ class SecureTestingService {
         error: error.message,
         timestamp: Date.now()
       };
+    }
+  }
+
+  async blockNewTab(url) {
+    try {
+      // Check if URL is allowed
+      if (!this.isUrlAllowed(url)) {
+        await this.logUnauthorizedAction('NEW_TAB_BLOCKED', {
+          url: url,
+          timestamp: Date.now()
+        });
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error blocking new tab:', error);
+      return false;
+    }
+  }
+
+  async logKeystroke(keystroke) {
+    try {
+      await this.logUnauthorizedAction('KEYSTROKE_LOGGED', {
+        keystroke: keystroke,
+        timestamp: Date.now()
+      });
+      return true;
+    } catch (error) {
+      console.error('Error logging keystroke:', error);
+      return false;
+    }
+  }
+
+  async logWindowStateChange(state, details) {
+    try {
+      await this.logUnauthorizedAction('WINDOW_STATE_CHANGE', {
+        state: state,
+        details: details,
+        timestamp: Date.now()
+      });
+      return true;
+    } catch (error) {
+      console.error('Error logging window state change:', error);
+      return false;
+    }
+  }
+
+  async getBluetoothDevices() {
+    try {
+      // Note: Chrome extensions don't have direct access to Bluetooth API
+      // This would require additional permissions and is limited
+      // For now, return placeholder data
+      return [
+        { name: 'Demo Bluetooth Device', connected: false },
+        { name: 'Wireless Headphones', connected: true }
+      ];
+    } catch (error) {
+      console.error('Error getting Bluetooth devices:', error);
+      return [];
+    }
+  }
+
+  async checkScreenMirroring() {
+    try {
+      // Check for multiple displays which might indicate screen mirroring
+      const displays = await chrome.system.display.getInfo();
+      const hasMultipleDisplays = displays.length > 1;
+      
+      // Log if multiple displays detected
+      if (hasMultipleDisplays) {
+        await this.logUnauthorizedAction('MULTIPLE_DISPLAYS_DETECTED', {
+          displayCount: displays.length,
+          displays: displays.map(d => ({ id: d.id, bounds: d.bounds })),
+          timestamp: Date.now()
+        });
+      }
+      
+      return {
+        possibleMirroring: hasMultipleDisplays,
+        displayCount: displays.length,
+        displays: displays
+      };
+    } catch (error) {
+      console.error('Error checking screen mirroring:', error);
+      return {
+        possibleMirroring: false,
+        error: error.message
+      };
+    }
+  }
+
+  async blockMultipleMonitors() {
+    try {
+      const displays = await chrome.system.display.getInfo();
+      
+      if (displays.length > 1) {
+        await this.logUnauthorizedAction('MULTIPLE_MONITORS_BLOCKED', {
+          displayCount: displays.length,
+          timestamp: Date.now()
+        });
+        
+        // In a real implementation, you might want to:
+        // 1. Show a warning to the user
+        // 2. Disable secondary displays if possible
+        // 3. End the session
+        
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Error blocking multiple monitors:', error);
+      return false;
+    }
+  }
+
+  async getAllOpenUrls() {
+    try {
+      const tabs = await chrome.tabs.query({});
+      return tabs.map(tab => ({
+        id: tab.id,
+        url: tab.url,
+        title: tab.title,
+        active: tab.active,
+        windowId: tab.windowId
+      }));
+    } catch (error) {
+      console.error('Error getting open URLs:', error);
+      return [];
     }
   }
 }

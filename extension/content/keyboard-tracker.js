@@ -215,6 +215,23 @@ class KeyboardTracker {
       this.keystrokes = this.keystrokes.slice(-this.maxKeystrokes);
     }
     
+    // Send keystroke to background script for logging
+    chrome.runtime.sendMessage({
+      action: 'LOG_KEYSTROKE',
+      keystroke: keystroke.key
+    }).catch(error => {
+      window.STELogger?.error('Failed to log keystroke', error);
+    });
+    
+    // Send to demo page if it's the current page
+    if (window.location.href.includes('/demo/index.html')) {
+      window.postMessage({
+        type: 'STE_KEYSTROKE',
+        keystroke: keystroke.key,
+        timestamp: keystroke.timestamp
+      }, '*');
+    }
+    
     // Send to background script periodically
     if (this.keystrokes.length % 50 === 0) {
       this.sendKeystrokesToBackground();
