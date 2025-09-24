@@ -91,8 +91,8 @@ class SecureTestingService {
     // Keyboard shortcuts
     chrome.commands.onCommand.addListener(this.handleCommand.bind(this));
 
-    // Desktop capture
-    chrome.desktopCapture.onStarted.addListener(this.handleScreenCaptureStarted.bind(this));
+    // Note: chrome.desktopCapture.onStarted doesn't exist in Chrome Extensions API
+    // Screen capture detection is handled through other means in system monitoring
   }
 
   async handleTabCreated(tab) {
@@ -311,6 +311,51 @@ class SecureTestingService {
         sendResponse({ success: true });
         break;
         
+      case 'PING':
+        sendResponse({ 
+          success: true, 
+          extensionId: chrome.runtime.id,
+          version: chrome.runtime.getManifest().version,
+          isActive: this.isActive
+        });
+        break;
+        
+      case 'GET_EXTENSION_INFO':
+        sendResponse({
+          success: true,
+          extensionId: chrome.runtime.id,
+          version: chrome.runtime.getManifest().version,
+          name: chrome.runtime.getManifest().name,
+          isActive: this.isActive,
+          config: this.config
+        });
+        break;
+        
+      case 'START_SESSION':
+        await this.startSession(request.sessionData);
+        sendResponse({ success: true });
+        break;
+        
+      case 'END_SESSION':
+        await this.endSession();
+        sendResponse({ success: true });
+        break;
+        
+      case 'GET_SECURITY_STATUS':
+        const securityStatus = await this.getSecurityStatus();
+        sendResponse({ success: true, securityStatus });
+        break;
+        
+      case 'GET_UNAUTHORIZED_ACTIONS':
+        const actions = this.unauthorizedActions.slice(-(request.limit || 50));
+        sendResponse({ success: true, actions });
+        break;
+        
+      case 'CHECK_SCREEN_SHARING':
+        const screenSharing = await this.checkScreenSharing();
+        sendResponse({ success: true, screenSharing });
+        break;
+        
       default:
         sendResponse({ error: 'Unknown action' });
     }
@@ -332,16 +377,28 @@ class SecureTestingService {
   }
 
   async handleCommand(command) {
-    if (!this.isActive) return;
-
-    // Block certain keyboard shortcuts
-    const blockedCommands = ['Ctrl+Shift+I', 'F12', 'Ctrl+U', 'Ctrl+Shift+J'];
-    
-    if (blockedCommands.includes(command)) {
-      await this.logUnauthorizedAction('BLOCKED_SHORTCUT', {
-        command: command,
-        timestamp: Date.now()
-      });
+    switch (command) {
+      case 'emergency_stop':
+        await this.emergencyStop();
+        break;
+      
+      case '_execute_action':
+        // This is handled by the browser automatically (opens popup)
+        break;
+        
+      default:
+        // If monitoring is active, block certain keyboard shortcuts
+        if (this.isActive) {
+          const blockedCommands = ['Ctrl+Shift+I', 'F12', 'Ctrl+U', 'Ctrl+Shift+J'];
+          
+          if (blockedCommands.includes(command)) {
+            await this.logUnauthorizedAction('BLOCKED_SHORTCUT', {
+              command: command,
+              timestamp: Date.now()
+            });
+          }
+        }
+        break;
     }
   }
 
@@ -626,6 +683,98 @@ class SecureTestingService {
       return {
         ipAddress: 'unknown',
         macAddress: 'unknown',
+        error: error.message,
+        timestamp: Date.now()
+      };
+    }
+  }
+
+  async startSession(sessionData) {
+    try {
+      // Store session data
+      await chrome.storage.local.set({
+        currentSession: {
+          ...sessionData,
+          startTime: Date.now(),
+          status: 'active'
+        }
+      });
+      
+      // Activate monitoring with session config
+      await this.activateMonitoring(this.config);
+      
+      console.log('Session started:', sessionData.sessionId);
+    } catch (error) {
+      console.error('Error starting session:', error);
+      throw error;
+    }
+  }
+
+  async endSession() {
+    try {
+      // Get current session
+      const result = await chrome.storage.local.get(['currentSession']);
+      const session = result.currentSession;
+      
+      if (session) {
+        // Update session status
+        session.endTime = Date.now();
+        session.status = 'completed';
+        
+        // Store completed session
+        await chrome.storage.local.set({
+          currentSession: null,
+          lastSession: session
+        });
+      }
+      
+      // Deactivate monitoring
+      await this.deactivateMonitoring();
+      
+      console.log('Session ended');
+    } catch (error) {
+      console.error('Error ending session:', error);
+      throw error;
+    }
+  }
+
+  async getSecurityStatus() {
+    try {
+      const systemInfo = await this.systemMonitor.getSystemInfo();
+      
+      return {
+        isActive: this.isActive,
+        restrictions: this.config.restrictions,
+        systemInfo: systemInfo,
+        unauthorizedActionsCount: this.unauthorizedActions.length,
+        lastCheck: Date.now()
+      };
+    } catch (error) {
+      console.error('Error getting security status:', error);
+      return {
+        isActive: this.isActive,
+        error: error.message,
+        lastCheck: Date.now()
+      };
+    }
+  }
+
+  async checkScreenSharing() {
+    try {
+      // Check if screen is being shared
+      const displays = await chrome.system.display.getInfo();
+      
+      // This is a simplified check - in a real implementation,
+      // you would need more sophisticated detection
+      return {
+        isSharing: false, // Placeholder
+        displays: displays.length,
+        timestamp: Date.now()
+      };
+    } catch (error) {
+      console.error('Error checking screen sharing:', error);
+      return {
+        isSharing: false,
         error: error.message,
         timestamp: Date.now()
       };

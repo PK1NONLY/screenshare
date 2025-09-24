@@ -535,11 +535,6 @@
             }
 
             async startSession() {
-                if (!this.api) {
-                    this.log('Integration API not available', 'error');
-                    return;
-                }
-                
                 try {
                     const sessionData = {
                         sessionId: document.getElementById('sessionId').value || `demo_${Date.now()}`,
@@ -548,9 +543,12 @@
                         duration: (parseInt(document.getElementById('duration').value) || 120) * 60000
                     };
 
-                    const success = await this.api.startSession(sessionData);
+                    const response = await this.sendMessageToExtension({ 
+                        action: 'START_SESSION',
+                        sessionData: sessionData
+                    });
                     
-                    if (success) {
+                    if (response && response.success) {
                         this.log(`Session started: ${sessionData.sessionId}`, 'success');
                     } else {
                         this.log('Failed to start session', 'error');
@@ -561,15 +559,10 @@
             }
 
             async endSession() {
-                if (!this.api) {
-                    this.log('Integration API not available', 'error');
-                    return;
-                }
-                
                 try {
-                    const success = await this.api.endSession();
+                    const response = await this.sendMessageToExtension({ action: 'END_SESSION' });
                     
-                    if (success) {
+                    if (response && response.success) {
                         this.log('Session ended successfully', 'success');
                     } else {
                         this.log('Failed to end session', 'error');
@@ -580,15 +573,10 @@
             }
 
             async emergencyStop() {
-                if (!this.api) {
-                    this.log('Integration API not available', 'error');
-                    return;
-                }
-                
                 try {
-                    const success = await this.api.emergencyStop();
+                    const response = await this.sendMessageToExtension({ action: 'EMERGENCY_STOP' });
                     
-                    if (success) {
+                    if (response && response.success) {
                         this.log('Emergency stop executed', 'warning');
                     } else {
                         this.log('Failed to execute emergency stop', 'error');
@@ -599,11 +587,6 @@
             }
 
             async uninstallExtension() {
-                if (!this.api) {
-                    this.log('Integration API not available', 'error');
-                    return;
-                }
-                
                 try {
                     // Confirm with user
                     const confirmed = confirm('Are you sure you want to uninstall the Secure Testing Environment extension? This action cannot be undone.');
@@ -615,10 +598,16 @@
 
                     this.log('Initiating extension uninstall...', 'warning');
                     
-                    const success = await this.api.uninstallExtension();
+                    const response = await this.sendMessageToExtension({ action: 'UNINSTALL_EXTENSION' });
                     
-                    if (success) {
-                        this.log('Extension uninstall initiated', 'warning');
+                    if (response && response.success) {
+                        this.log('Extension uninstall initiated successfully', 'success');
+                        this.log('The extension will be removed shortly...', 'warning');
+                        
+                        // Show final message
+                        setTimeout(() => {
+                            alert('Thank you for using Secure Testing Environment. The extension has been uninstalled.');
+                        }, 2000);
                     } else {
                         this.log('Failed to uninstall extension', 'error');
                     }
@@ -627,17 +616,32 @@
                 }
             }
 
+            getConfigFromForm() {
+                const urls = document.getElementById('allowedUrls').value
+                    .split('\n')
+                    .map(url => url.trim())
+                    .filter(url => url.length > 0);
+
+                return {
+                    allowedUrls: urls,
+                    restrictions: {
+                        blockCopyPaste: document.getElementById('blockCopyPaste').checked,
+                        blockNewTabs: document.getElementById('blockNewTabs').checked,
+                        blockScreenshots: document.getElementById('blockScreenshots').checked,
+                        blockMultipleMonitors: document.getElementById('blockMultipleMonitors').checked
+                    }
+                };
+            }
+
             async applyConfiguration() {
-                if (!this.api) {
-                    this.log('Integration API not available', 'error');
-                    return;
-                }
-                
                 try {
                     const config = this.getConfigFromForm();
-                    const success = await this.api.updateConfiguration(config);
+                    const response = await this.sendMessageToExtension({ 
+                        action: 'UPDATE_CONFIG',
+                        config: config
+                    });
                     
-                    if (success) {
+                    if (response && response.success) {
                         this.log('Configuration applied successfully', 'success');
                     } else {
                         this.log('Failed to apply configuration', 'error');
@@ -648,30 +652,38 @@
             }
 
             async createTestSession() {
-                if (!this.api) {
-                    this.log('Integration API not available', 'error');
-                    return;
-                }
-                
                 try {
-                    const options = {
-                        sessionId: document.getElementById('sessionId').value,
-                        candidateId: document.getElementById('candidateId').value,
-                        examId: document.getElementById('examId').value,
-                        duration: parseInt(document.getElementById('duration').value) || 120,
-                        allowedUrls: this.getAllowedUrls(),
-                        blockCopyPaste: document.getElementById('blockCopyPaste').checked,
-                        blockNewTabs: document.getElementById('blockNewTabs').checked,
-                        blockScreenshots: document.getElementById('blockScreenshots').checked,
-                        blockMultipleMonitors: document.getElementById('blockMultipleMonitors').checked
+                    const sessionData = {
+                        sessionId: document.getElementById('sessionId').value || `demo_${Date.now()}`,
+                        candidateId: document.getElementById('candidateId').value || 'demo_candidate',
+                        examId: document.getElementById('examId').value || 'demo_exam',
+                        duration: (parseInt(document.getElementById('duration').value) || 120) * 60000
                     };
 
-                    const config = await this.api.createTestSession(options);
-                    
-                    if (config) {
-                        this.log(`Test session created successfully: ${config.session.sessionId}`, 'success');
+                    const config = this.getConfigFromForm();
+
+                    // Apply configuration first
+                    await this.sendMessageToExtension({ 
+                        action: 'UPDATE_CONFIG',
+                        config: config
+                    });
+
+                    // Start session
+                    const sessionResponse = await this.sendMessageToExtension({ 
+                        action: 'START_SESSION',
+                        sessionData: sessionData
+                    });
+
+                    // Activate monitoring
+                    const activateResponse = await this.sendMessageToExtension({ 
+                        action: 'ACTIVATE_MONITORING',
+                        config: config
+                    });
+
+                    if (sessionResponse && sessionResponse.success && activateResponse && activateResponse.success) {
+                        this.log(`Test session created and activated: ${sessionData.sessionId}`, 'success');
                     } else {
-                        this.log('Failed to create test session', 'error');
+                        this.log('Failed to create complete test session', 'error');
                     }
                 } catch (error) {
                     this.log(`Error creating test session: ${error.message}`, 'error');
@@ -679,19 +691,22 @@
             }
 
             async getSystemInfo() {
-                if (!this.api) {
-                    this.log('Integration API not available', 'error');
-                    return;
-                }
-                
                 try {
-                    const systemInfo = await this.api.getSystemInfo();
+                    const response = await this.sendMessageToExtension({ action: 'GET_SYSTEM_INFO' });
                     
-                    if (systemInfo) {
-                        this.updateSystemStats(systemInfo);
+                    if (response && response.systemInfo) {
+                        const systemInfo = response.systemInfo;
+                        
+                        document.getElementById('cpuUsage').textContent = 
+                            systemInfo.cpu ? `${systemInfo.cpu.usage.toFixed(1)}%` : '--';
+                        document.getElementById('memoryUsage').textContent = 
+                            systemInfo.memory ? `${systemInfo.memory.usage.toFixed(1)}%` : '--';
+                        document.getElementById('batteryLevel').textContent = 
+                            systemInfo.battery ? `${(systemInfo.battery.level * 100).toFixed(0)}%` : '--';
+                        document.getElementById('displayCount').textContent = 
+                            systemInfo.displays ? systemInfo.displays.length : '--';
+
                         this.log(`System info updated`, 'success');
-                    } else {
-                        this.log('Failed to get system info', 'error');
                     }
                 } catch (error) {
                     this.log(`Error getting system info: ${error.message}`, 'error');
@@ -699,74 +714,32 @@
             }
 
             async checkSecurityStatus() {
-                if (!this.api) {
-                    this.log('Integration API not available', 'error');
-                    return;
-                }
-                
                 try {
-                    const securityStatus = await this.api.getSecurityStatus();
-                    
-                    if (securityStatus) {
-                        this.log(`Security status: ${JSON.stringify(securityStatus, null, 2)}`, 'info');
-                    } else {
-                        this.log('Failed to get security status', 'error');
+                    const response = await this.sendMessageToExtension({ action: 'GET_SECURITY_STATUS' });
+                    if (response) {
+                        this.log(`Security status: ${JSON.stringify(response, null, 2)}`, 'info');
                     }
                 } catch (error) {
-                    this.log(`Error getting security status: ${error.message}`, 'error');
-                }
-            }
-
-            getConfigFromForm() {
-                return {
-                    allowedUrls: this.getAllowedUrls(),
-                    restrictions: {
-                        blockCopyPaste: document.getElementById('blockCopyPaste').checked,
-                        blockNewTabs: document.getElementById('blockNewTabs').checked,
-                        blockScreenshots: document.getElementById('blockScreenshots').checked,
-                        blockMultipleMonitors: document.getElementById('blockMultipleMonitors').checked
-                    }
-                };
-            }
-
-            getAllowedUrls() {
-                const urlsText = document.getElementById('allowedUrls').value;
-                return urlsText.split('\n').filter(url => url.trim()).map(url => url.trim());
-            }
-
-            updateSystemStats(systemInfo) {
-                if (systemInfo.cpu) {
-                    document.getElementById('cpuUsage').textContent = `${systemInfo.cpu.usage || 0}%`;
-                }
-                if (systemInfo.memory) {
-                    document.getElementById('memoryUsage').textContent = `${systemInfo.memory.usage || 0}%`;
-                }
-                if (systemInfo.battery) {
-                    document.getElementById('batteryLevel').textContent = `${systemInfo.battery.level || 0}%`;
-                }
-                if (systemInfo.displays) {
-                    document.getElementById('displayCount').textContent = systemInfo.displays.length || 0;
+                    this.log(`Error checking security status: ${error.message}`, 'error');
                 }
             }
 
             log(message, type = 'info') {
-                const logContainer = document.getElementById('activityLog');
-                const timestamp = new Date().toLocaleTimeString();
-                const logEntry = document.createElement('div');
-                logEntry.className = `log-entry ${type}`;
-                logEntry.textContent = `[${timestamp}] ${message}`;
-                
-                logContainer.appendChild(logEntry);
-                logContainer.scrollTop = logContainer.scrollHeight;
+                const logEl = document.getElementById('activityLog');
+                const entry = document.createElement('div');
+                entry.className = `log-entry ${type}`;
+                entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+                logEl.appendChild(entry);
+                logEl.scrollTop = logEl.scrollHeight;
             }
 
             clearLog() {
-                const logContainer = document.getElementById('activityLog');
-                logContainer.innerHTML = '<div class="log-entry info">Activity log cleared.</div>';
+                document.getElementById('activityLog').innerHTML = '';
+                this.log('Activity log cleared', 'info');
             }
         }
 
-        // Initialize the demo when the page loads
+        // Initialize demo when page loads
         document.addEventListener('DOMContentLoaded', () => {
             new STEDemo();
         });

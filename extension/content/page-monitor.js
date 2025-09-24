@@ -24,8 +24,11 @@ class PageMonitor {
     // Get configuration from background
     await this.loadConfiguration();
     
-    // Set up message listener
+    // Set up message listener for extension messages
     chrome.runtime.onMessage.addListener(this.handleMessage.bind(this));
+    
+    // Set up message listener for Integration API
+    window.addEventListener('message', this.handleIntegrationAPIMessage.bind(this));
     
     // Start monitoring if active
     if (this.isActive) {
@@ -64,11 +67,49 @@ class PageMonitor {
         sendResponse({ success: true });
         break;
         
+      case 'GET_BATTERY_INFO':
+        this.getBatteryInfo().then(battery => {
+          sendResponse({ battery });
+        }).catch(error => {
+          sendResponse({ error: error.message });
+        });
+        break;
+        
       default:
         sendResponse({ error: 'Unknown action' });
     }
     
     return true;
+  }
+
+  async handleIntegrationAPIMessage(event) {
+    // Only handle messages from the same window
+    if (event.source !== window) return;
+    
+    // Check if it's a message from the Integration API
+    if (event.data && event.data.source === 'secure-testing-environment-api') {
+      const { message } = event.data;
+      
+      try {
+        // Forward the message to the background script
+        const response = await chrome.runtime.sendMessage(message);
+        
+        // Send response back to the Integration API
+        window.postMessage({
+          source: 'secure-testing-environment-response',
+          messageId: message.messageId,
+          response: response
+        }, '*');
+        
+      } catch (error) {
+        // Send error response back to the Integration API
+        window.postMessage({
+          source: 'secure-testing-environment-response',
+          messageId: message.messageId,
+          response: { error: error.message, success: false }
+        }, '*');
+      }
+    }
   }
 
   startMonitoring() {
@@ -557,6 +598,36 @@ class PageMonitor {
     return this.pageData.interactions.filter(i => 
       i.type.includes('suspicious') || i.type.includes('blocked')
     ).length;
+  }
+
+  async getBatteryInfo() {
+    try {
+      if ('getBattery' in navigator) {
+        const battery = await navigator.getBattery();
+        return {
+          level: battery.level,
+          charging: battery.charging,
+          chargingTime: battery.chargingTime,
+          dischargingTime: battery.dischargingTime
+        };
+      } else {
+        // Battery API not supported
+        return {
+          level: 1,
+          charging: false,
+          chargingTime: Infinity,
+          dischargingTime: Infinity
+        };
+      }
+    } catch (error) {
+      console.error('Failed to get battery info:', error);
+      return {
+        level: 1,
+        charging: false,
+        chargingTime: Infinity,
+        dischargingTime: Infinity
+      };
+    }
   }
 }
 

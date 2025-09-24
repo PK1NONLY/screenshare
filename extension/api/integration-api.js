@@ -30,22 +30,39 @@
     }
 
     async connectToExtension() {
-      // Try to find the extension
-      const response = await this.sendMessage({ action: 'PING' });
-      
-      if (response && response.success) {
+      try {
+        // Try to ping the extension
+        const response = await this.sendMessage({ action: 'PING' });
+        
+        if (response && response.success) {
+          this.isConnected = true;
+          this.extensionId = response.extensionId;
+          
+          // Process queued messages
+          this.processMessageQueue();
+          
+          // Set up message listener for extension events
+          this.setupMessageListener();
+          
+          return true;
+        } else {
+          throw new Error('Extension not found or not responding');
+        }
+      } catch (error) {
+        // Try to establish connection anyway
         this.isConnected = true;
-        this.extensionId = response.extensionId;
-        
-        // Process queued messages
-        this.processMessageQueue();
-        
-        // Set up message listener for extension events
         this.setupMessageListener();
         
-        return true;
-      } else {
-        throw new Error('Extension not found or not responding');
+        // Test with a simple message
+        try {
+          const testResponse = await this.sendMessage({ action: 'PING' });
+          if (testResponse) {
+            return true;
+          }
+        } catch (testError) {
+          this.isConnected = false;
+          throw new Error('Extension not available');
+        }
       }
     }
 

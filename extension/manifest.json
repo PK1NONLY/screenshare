@@ -16,17 +16,17 @@
     "scripting",
     "webNavigation",
     "webRequest",
-    "webRequestBlocking",
+    "declarativeNetRequest",
     "desktopCapture",
     "notifications",
     "power",
-    "processes",
     "sessions",
     "topSites",
     "management",
     "privacy",
     "contentSettings",
-    "debugger"
+    "debugger",
+    "commands"
   ],
   
   "host_permissions": [
@@ -88,5 +88,22 @@
   
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"
+  },
+
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+E",
+        "mac": "Command+Shift+E"
+      },
+      "description": "Open Secure Testing Environment"
+    },
+    "emergency_stop": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+X",
+        "mac": "Command+Shift+X"
+      },
+      "description": "Emergency stop monitoring"
+    }
   }
 }
